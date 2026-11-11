@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Shopee Clip V2 - ส่งข้อมูลสินค้า",
+  "version": "0.1.2",
+  "description": "อ่านข้อมูลจากหน้าสินค้า Shopee ที่เปิดอยู่ แล้วส่งให้โปรแกรม Shopee Clip V2 ในเครื่องนี้",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://shopee.co.th/*", "http://127.0.0.1:4317/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "ส่งสินค้านี้ไปสร้างคลิป" },
+  "content_scripts": [{ "matches": ["https://shopee.co.th/*"], "js": ["content.js"], "run_at": "document_idle" }]
+}

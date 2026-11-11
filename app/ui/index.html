@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Shopee Clip V2</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="3"/><path d="m3 7 16-4M8 5l3 3m3-4 3 3m-7 5 5 3-5 3z"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="2.5" fill="var(--surface)"/><circle cx="16" cy="17" r="2.5" fill="var(--surface)"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9m-5-7a9 9 0 1 0 10 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="m10 13 4-4m-6 7-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0m2 0 1-1a3.5 3.5 0 1 1 5 5l-4 4a3.5 3.5 0 0 1-5 0"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3m-5 5 5-5 5 5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M4 5v5h5M4.5 10a8 8 0 1 1 1.7 7"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M13 4h7v7m0-7-9 9m6 0v7H4V7h7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L19 7"/></symbol>
+  </svg>
+
+  <a class="skip" href="#main">ข้ามไปที่คิวงาน</a>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="/" aria-label="Shopee Clip V2 หน้าหลัก">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg></span>
+        <span>Shopee Clip <small>V2</small></span>
+      </a>
+      <div class="topbar-actions">
+        <a class="button primary mobile-create" href="#urls" aria-label="สร้างงาน"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>สร้างงาน</span></a>
+        <button class="button subtle" id="open-settings" type="button" aria-label="ตั้งค่า"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>ตั้งค่า</span></button>
+        <button class="button icon-button power" id="open-shutdown" type="button" aria-label="ปิดระบบ" title="ปิดระบบ"><svg class="icon" aria-hidden="true"><use href="#i-power"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" id="main" tabindex="-1">
+    <div class="page-heading">
+      <h1>คิวสร้างคลิป</h1>
+      <span class="connection" id="connection" role="status"><span></span>กำลังเชื่อมต่อ</span>
+    </div>
+    <dl class="overview" aria-label="จำนวนงานตามสถานะ">
+      <div class="metric metric-running"><dt>กำลังทำ</dt><dd id="count-running">—</dd></div>
+      <div class="metric metric-waiting"><dt>รอเริ่ม / รอคิว</dt><dd id="count-waiting">—</dd></div>
+      <div class="metric metric-error"><dt>ล้มเหลว</dt><dd id="count-error">—</dd></div>
+      <div class="metric metric-done"><dt>เสร็จแล้ว</dt><dd id="count-done">—</dd></div>
+    </dl>
+
+    <div class="workspace">
+      <div class="worklist">
+        <section aria-labelledby="queue-heading">
+          <div class="section-title queue-heading">
+            <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></span>
+            <h2 id="queue-heading" tabindex="-1">งานที่ยังต้องจัดการ</h2>
+            <span id="open-count" class="count" aria-label="จำนวนงานที่ยังต้องจัดการ">—</span>
+          </div>
+          <p id="queue-message" class="feedback" role="status"></p>
+          <p class="empty panel" id="empty">กำลังโหลดคิวงาน…</p>
+          <div class="job-list" id="queue"></div>
+        </section>
+
+        <details id="completed" class="archive panel">
+          <summary>
+            <span class="section-icon success"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>
+            <span class="archive-title">งานที่เสร็จแล้ว</span>
+            <span id="done-count" class="count" aria-label="จำนวนงานที่เสร็จแล้ว">—</span>
+            <svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </summary>
+          <p class="empty" id="done-empty">ยังไม่มีคลิปที่เสร็จแล้ว</p>
+          <div id="done-list"></div>
+        </details>
+      </div>
+      <section class="composer panel" aria-labelledby="new-heading">
+        <div class="section-title">
+          <span class="section-icon accent"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></span>
+          <h2 id="new-heading">สร้างงาน</h2>
+        </div>
+        <form id="create-form">
+          <label for="urls">ลิงก์สินค้า Shopee</label>
+          <textarea id="urls" placeholder="https://shopee.co.th/…" required spellcheck="false" aria-describedby="urls-hint"></textarea>
+          <p class="hint" id="urls-hint">วางได้หลายลิงก์ บรรทัดละ 1 ลิงก์</p>
+
+          <label for="style">แนวสคริปต์</label>
+          <select id="style"><option value="">สุ่มแนวสคริปต์</option></select>
+
+          <button class="button primary create-button" id="add" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> สร้างงานจากลิงก์</button>
+          <p id="msg" class="feedback" role="status"></p>
+        </form>
+        <p class="hint">เพิ่มคลิปดิบได้ในรายการงาน แล้วกดเริ่มสร้างคลิปเมื่อพร้อม</p>
+        <details class="help">
+          <summary>วิธีรับข้อมูลจาก Shopee<svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <p>ระบบจะเปิดหน้าสินค้าในเบราว์เซอร์ ให้เปิดส่วนขยาย Shopee Clip ไว้เพื่อส่งข้อมูล ถ้า Shopee ขอให้ยืนยันตัวตน ให้ยืนยันในแท็บสินค้าแล้วรีเฟรชหน้านั้น</p>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="shutdown-dialog" aria-labelledby="shutdown-heading">
+    <div class="shutdown-panel">
+      <div class="power-mark"><svg class="icon" aria-hidden="true"><use href="#i-power"/></svg></div>
+      <h2 id="shutdown-heading">ปิด Shopee Clip</h2>
+      <p id="shutdown-status" role="status">ระบบจะทำคลิปที่กำลังเรนเดอร์ให้เสร็จ งานในคิวจะเริ่มต่อเมื่อเปิดใหม่</p>
+      <p id="shutdown-error" class="feedback" role="alert"></p>
+      <div class="actions dialog-actions">
+        <button class="button subtle" type="button" data-close autofocus>กลับหน้าคิว</button>
+        <button class="button danger" id="confirm-shutdown" type="button">ปิดระบบ</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="edit-dialog" aria-labelledby="edit-heading">
+    <div class="dialog-head">
+      <h2 id="edit-heading">แก้ไขงาน</h2>
+      <button class="button icon-button subtle" type="button" data-close aria-label="ปิด"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <form id="edit-form" class="dialog-body">
+      <label for="job-name">ชื่องาน</label>
+      <input id="job-name" maxlength="120" autocomplete="off" autofocus aria-describedby="name-hint">
+      <p class="hint" id="name-hint">เว้นว่างเพื่อใช้ชื่อสินค้าหรือลิงก์ Shopee</p>
+      <label for="job-style">แนวสคริปต์</label>
+      <select id="job-style" aria-describedby="style-hint"><option value="">สุ่มแนวสคริปต์</option></select>
+      <p class="hint" id="style-hint">ใช้กับการสร้างคลิปครั้งถัดไป</p>
+      <p class="feedback" id="edit-msg" role="alert"></p>
+      <div class="actions dialog-actions">
+        <button class="button subtle" type="button" data-close>ยกเลิก</button>
+        <button class="button primary" id="edit-save" type="submit">บันทึกงาน</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" aria-labelledby="delete-heading">
+    <div class="dialog-head">
+      <h2 id="delete-heading">ลบงานนี้หรือไม่</h2>
+      <button class="button icon-button subtle" type="button" data-close aria-label="ปิด"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <form id="delete-form" class="dialog-body">
+      <p class="delete-name" id="delete-name"></p>
+      <p class="hint">งานจะหายจากคิว ไฟล์ในโฟลเดอร์ส่งออกจะยังอยู่</p>
+      <p class="feedback" id="delete-msg" role="alert"></p>
+      <div class="actions dialog-actions">
+        <button class="button subtle" type="button" data-close autofocus>ยกเลิก</button>
+        <button class="button danger" id="delete-submit" type="submit">ลบงาน</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="preview-dialog" class="preview-dialog" aria-labelledby="preview-heading">
+    <div class="dialog-head">
+      <h2 id="preview-heading"></h2>
+      <button class="button icon-button subtle" type="button" data-close aria-label="ปิด"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="dialog-body preview-body" id="preview-body"></div>
+  </dialog>
+
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-heading">
+    <div class="dialog-head">
+      <h2 id="settings-heading">ตั้งค่า</h2>
+      <button class="button icon-button subtle" type="button" data-close aria-label="ปิด"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <form id="settings-form" class="dialog-body">
+      <fieldset>
+        <legend>AI เขียนสคริปต์</legend>
+        <label for="director">ผู้ให้บริการตามลำดับที่จะลอง</label>
+        <input id="director" autocomplete="off" required aria-describedby="providers">
+        <p class="hint">คั่นด้วยจุลภาค เลือกจาก <span id="providers"></span> โดย -api คิดค่าบริการตามการใช้งาน และ -cli ใช้บัญชีที่เข้าสู่ระบบไว้ในเครื่อง</p>
+        <div class="field-row">
+          <div><label for="test-p">ผู้ให้บริการที่จะทดสอบ</label><select id="test-p"></select></div>
+          <button class="button" id="test" type="button">ทดสอบการเชื่อมต่อ</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>โมเดลและ API key</legend>
+        <p class="hint">เว้นช่อง API key ว่างเพื่อใช้คีย์เดิม</p>
+        <div class="field-row">
+          <div><label for="m-gemini">โมเดล Gemini</label><input id="m-gemini" autocomplete="off"></div>
+          <div><label for="k-gemini">Gemini API key <span class="hint" id="has-gemini"></span></label><input id="k-gemini" type="password" autocomplete="off"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="m-claude">โมเดล Claude</label><input id="m-claude" autocomplete="off"></div>
+          <div><label for="k-claude">Claude API key <span class="hint" id="has-claude"></span></label><input id="k-claude" type="password" autocomplete="off"></div>
+        </div>
+        <div class="field-row">
+          <div><label for="m-gpt">โมเดล GPT</label><input id="m-gpt" autocomplete="off"></div>
+          <div><label for="k-gpt">GPT API key <span class="hint" id="has-gpt"></span></label><input id="k-gpt" type="password" autocomplete="off"></div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>เสียงพากย์และไฟล์ส่งออก</legend>
+        <div class="field-row">
+          <div>
+            <label for="voice">เสียงพากย์ Gemini TTS</label>
+            <input id="voice" list="voice-list" autocomplete="off">
+            <datalist id="voice-list"></datalist>
+          </div>
+          <button class="button" id="load-voices" type="button">โหลดรายชื่อเสียงโคลน</button>
+        </div>
+        <label for="export">โฟลเดอร์ส่งออก</label>
+        <input id="export" autocomplete="off">
+      </fieldset>
+      <p id="cfg-msg" class="feedback" role="status"></p>
+      <div class="actions dialog-actions">
+        <button class="button subtle" type="button" data-close>ปิด</button>
+        <button class="button primary" id="save" type="submit">บันทึกการตั้งค่า</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
+

@@ -1,0 +1,14 @@
+{
+  "name": "shopee-v2-render",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@google/genai": "^2.27.0",
+    "@imgly/background-removal-node": "^1.4.5",
+    "@remotion/cli": "4.0.535",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.535",
+    "tsx": "^4.23.15"
+  }
+}

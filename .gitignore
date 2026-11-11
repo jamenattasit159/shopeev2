@@ -1,0 +1,22 @@
+# Sensitive config
+config.toml
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Rust build artifacts
+target/
+app/target/
+
+# Remotion & build caches
+.cache/
+**/.cache/
+.remotion/
+**/.remotion/
+
+# Job data & exports
+jobs/
+.deleted-jobs/
+exports/
+story/out/

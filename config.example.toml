@@ -1,0 +1,14 @@
+port = 4317
+director = ["gemini-api"]
+voice = "voice_2p96bswu623b"
+export_dir = "exports"
+
+[keys]
+gemini = ""
+claude = ""
+gpt = ""
+
+[models]
+gemini = "gemini-2.5-flash"
+claude = "claude-sonnet-5-5"
+gpt = ""

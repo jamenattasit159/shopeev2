@@ -571,10 +571,12 @@ async fn main() -> Result<()> {
         .route("/story.js", get(story::page_script))
         .route("/api/story", get(story::list))
         .route("/api/story/link", post(story::add_link))
+        .route("/api/story/health", get(story::health))
         .route("/api/story/{id}", get(story::detail))
         .route("/api/story/{id}/scene/{scene}", post(story::edit))
         .route("/api/story/{id}/confirm", post(story::confirm))
         .route("/api/story/{id}/restart", post(story::restart))
+        .route("/api/story/{id}/retry", post(story::retry))
         .nest_service("/files", tower_http::services::ServeDir::new(root.join("jobs")))
         .layer(middleware::from_fn_with_state(app.clone(), guard))
         .with_state(app);

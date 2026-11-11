@@ -1,4 +1,3 @@
-import React from "react";
 import { useCurrentFrame } from "remotion";
 import { EP, SANS, fr, lin } from "../kit/ui";
 

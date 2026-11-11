@@ -20,3 +20,12 @@ jobs/
 .deleted-jobs/
 exports/
 story/out/
+
+# Python caches
+__pycache__/
+
+# photos of the job being rendered (copied in by the app, never source)
+story/public/img*.png
+
+# owner link lists
+*.csv

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Shopee Clip V2 - ส่งข้อมูลสินค้า",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "อ่านข้อมูลจากหน้าสินค้า Shopee ที่เปิดอยู่ แล้วส่งให้โปรแกรม Shopee Clip V2 ในเครื่องนี้",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["https://shopee.co.th/*", "http://127.0.0.1:4317/*"],

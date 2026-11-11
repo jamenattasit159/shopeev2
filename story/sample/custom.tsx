@@ -1,6 +1,7 @@
 // Per-clip 3D pieces. Written for ONE job (by Claude, or by hand) and copied to src/custom.tsx before rendering.
 // Contract: export `Product` = a model of the product standing on the origin (y=0 is the counter top, about 0.15-0.2 m tall),
 // taking `open` 0..1 for its lid/flap if it has one. Export `Product = null` to fall back to the real shop photo.
+// Export `Twist` = an optional prop for the twist (stands on the origin too, shown where a cut sets state "twist": true), or null.
 import React from "react";
 import { Bx, Cy, Pl, textTex } from "./kit/three";
 
@@ -29,3 +30,4 @@ export const Product: React.FC<{ open?: number }> | null = ({ open = 0 }) => {
   );
 };
 
+export const Twist: React.FC | null = null;

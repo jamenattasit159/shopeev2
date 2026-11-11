@@ -35,9 +35,9 @@ pub async fn complete(provider: &str, cfg: &Config, prompt: &str) -> Result<Stri
             text_at(&v, "/choices/0/message/content")
         }
         // The CLIs read the prompt from stdin, so quoting and length limits never bite.
-        "gemini-cli" => cli("gemini", &["-p", "ตอบตามคำสั่งใน stdin"], prompt).await,
-        "claude-cli" => cli("claude", &["-p"], prompt).await,
-        "gpt-cli" => cli("codex", &["exec", "--skip-git-repo-check", "-s", "read-only", "-"], prompt).await,
+        "gemini-cli" => cli("gemini", &["-p", "ตอบตามคำสั่งใน stdin"], prompt, None, 240).await,
+        "claude-cli" => cli("claude", &["-p"], prompt, None, 240).await,
+        "gpt-cli" => cli("codex", &["exec", "--skip-git-repo-check", "-s", "read-only", "-"], prompt, None, 240).await,
         other => bail!("ไม่รู้จักผู้ให้บริการ {other}"),
     }
 }
@@ -70,7 +70,18 @@ fn text_at(v: &Value, pointer: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("คำตอบจากผู้ให้บริการไม่มีข้อความ"))
 }
 
-async fn cli(program: &str, args: &[&str], prompt: &str) -> Result<String> {
+/// Claude Code without a screen, working in `cwd` and allowed to READ files there only (it looks at the product photos).
+/// Its reply comes back as text; this app writes the files.
+pub async fn claude_code(prompt: &str, cwd: &std::path::Path) -> Result<String> {
+    cli("claude", &["-p", "--tools", "Read", "--allowedTools", "Read"], prompt, Some(cwd), 480).await
+}
+
+/// True when the Claude Code CLI is installed and answers.
+pub async fn has_claude_code() -> bool {
+    cli("claude", &["--version"], "", None, 20).await.is_ok()
+}
+
+async fn cli(program: &str, args: &[&str], prompt: &str, cwd: Option<&std::path::Path>, secs: u64) -> Result<String> {
     // npm-installed CLIs are .cmd shims on Windows; they only start through cmd.
     let mut cmd = if cfg!(windows) {
         let mut c = tokio::process::Command::new("cmd");
@@ -81,7 +92,7 @@ async fn cli(program: &str, args: &[&str], prompt: &str) -> Result<String> {
     };
     let mut child = cmd
         .args(args)
-        .current_dir(std::env::temp_dir()) // keep the agent CLIs away from project files
+        .current_dir(cwd.map(std::path::Path::to_path_buf).unwrap_or_else(std::env::temp_dir)) // by default keep the agent CLIs away from project files
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -91,11 +102,12 @@ async fn cli(program: &str, args: &[&str], prompt: &str) -> Result<String> {
     let mut stdin = child.stdin.take().expect("piped");
     stdin.write_all(prompt.as_bytes()).await?;
     drop(stdin);
-    let out = tokio::time::timeout(std::time::Duration::from_secs(240), child.wait_with_output())
+    let out = tokio::time::timeout(std::time::Duration::from_secs(secs), child.wait_with_output())
         .await
-        .map_err(|_| anyhow!("{program} ไม่ตอบภายใน 4 นาที"))??;
+        .map_err(|_| anyhow!("{program} ไม่ตอบภายใน {secs} วินาที"))??;
     if !out.status.success() {
-        let err = String::from_utf8_lossy(&out.stderr);
+        // some CLIs explain themselves on stdout (claude: "Failed to authenticate ...")
+        let err = [&out.stderr, &out.stdout].iter().map(|b| String::from_utf8_lossy(b).trim().to_string()).find(|t| !t.is_empty()).unwrap_or_default();
         bail!("{program} ล้มเหลว: {}", err.chars().take(300).collect::<String>());
     }
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())

@@ -22,19 +22,23 @@ export type KitchenProps = {
   /** glass of warm water on the counter; lumps = powder that will not dissolve */ cup?: boolean; lumps?: boolean;
   /** the product (a 3D model from src/custom.tsx) replaces the tin */ product?: React.ReactNode;
   /** cold moonlight mood 0..1 (the twist) */ cold?: number;
+  /** a per-clip prop from src/custom.tsx, standing where the glass goes */ twist?: React.ReactNode;
+  /** wall colour (varied per clip) */ wall?: string;
+  /** a mess on the counter round the container 0..1; a chopping board with a knife (raw = raw meat on it) */ stain?: number; board?: boolean; raw?: boolean;
+  /** words on the container's label and on a red sticker below it (from the plan; empty = none) */ label?: string; note?: string;
   children?: React.ReactNode;
 };
 
-const Tin: React.FC<Pick<KitchenProps, "lid" | "scoop" | "clump">> = ({ lid = "ajar", scoop, clump = 0 }) => {
-  const sticker = textTex("เปิดมาแล้ว 19 วัน", 512, 160, "#FFFDF4", "#C0392B", 62, "tin-19");
-  const brand = textTex("นมผง", 512, 200, "#FFFFFF", "#2A4E8A", 120, "tin-brand");
+const Tin: React.FC<Pick<KitchenProps, "lid" | "scoop" | "clump" | "label" | "note">> = ({ lid = "ajar", scoop, clump = 0, label = "", note = "" }) => {
+  const sticker = note ? textTex(note, 512, 160, "#FFFDF4", "#C0392B", 62, "tin-note-" + note) : undefined;
+  const brand = label ? textTex(label, 512, 200, "#FFFFFF", "#2A4E8A", label.length > 6 ? 80 : 120, "tin-label-" + label) : undefined;
   const H = 0.16, R = 0.066;
   return (
     <group position={TIN}>
       <Cy p={[0, H / 2, 0]} r={R} h={H} c={TIN_C} seg={40} />
       <Cy p={[0, H / 2, 0]} r={R + 0.001} h={H * 0.5} c="#FFFFFF" seg={40} />
-      <Pl p={[0, H * 0.56, R + 0.003]} s={[0.085, 0.034]} c="#ffffff" map={brand} />
-      <Pl p={[0, H * 0.3, R + 0.003]} s={[0.092, 0.029]} c="#ffffff" map={sticker} />
+      {brand ? <Pl p={[0, H * 0.56, R + 0.003]} s={[0.085, 0.034]} c="#ffffff" map={brand} /> : null}
+      {sticker ? <Pl p={[0, H * 0.3, R + 0.003]} s={[0.092, 0.029]} c="#ffffff" map={sticker} /> : null}
       {lid === "off" ? (
         <>
           <Cy p={[0, H - 0.012, 0]} r={R - 0.006} h={0.004} c={POWDER} seg={40} />
@@ -56,7 +60,7 @@ const Tin: React.FC<Pick<KitchenProps, "lid" | "scoop" | "clump">> = ({ lid = "a
   );
 };
 
-export const Kitchen: React.FC<KitchenProps> = ({ lid, scoop, clump, cup, lumps, product, cold = 0, children }) => {
+export const Kitchen: React.FC<KitchenProps> = ({ lid = "ajar", scoop, clump, cup, lumps, product, cold = 0, twist, wall = WALL, label, note, stain = 0, board, raw, children }) => {
   const warm = 1 - cold * 0.75;
   return (
     <>
@@ -66,9 +70,9 @@ export const Kitchen: React.FC<KitchenProps> = ({ lid, scoop, clump, cup, lumps,
       <pointLight position={[0.2, 1.5, 1.6]} intensity={0.45} distance={3.2} color={cold > 0.5 ? "#C8D8FF" : "#FFE6CC"} />
       {/* room */}
       <Pl p={[0, 0, 0]} s={[6, 6]} c={FLOOR} rx={-Math.PI / 2} />
-      <Bx p={[0, 1.4, -1.95]} s={[4.6, 2.8, 0.1]} c={WALL} />
-      <Bx p={[-2.3, 1.4, 0]} s={[0.1, 2.8, 4]} c={WALL} />
-      <Bx p={[2.3, 1.4, 0]} s={[0.1, 2.8, 4]} c={WALL} />
+      <Bx p={[0, 1.4, -1.95]} s={[4.6, 2.8, 0.1]} c={wall} />
+      <Bx p={[-2.3, 1.4, 0]} s={[0.1, 2.8, 4]} c={wall} />
+      <Bx p={[2.3, 1.4, 0]} s={[0.1, 2.8, 4]} c={wall} />
       {/* night window */}
       <Bx p={[-0.9, 1.55, -1.9]} s={[0.9, 0.9, 0.04]} c="#22314F" e="#31508A" ei={0.5} />
       <Bx p={[-0.9, 1.55, -1.88]} s={[0.04, 0.9, 0.05]} c={WOOD} />
@@ -89,8 +93,19 @@ export const Kitchen: React.FC<KitchenProps> = ({ lid, scoop, clump, cup, lumps,
       {/* counter */}
       <Bx p={[0, 0.42, 0]} s={[2.6, 0.84, 0.6]} c={WOOD} />
       <Bx p={[0, TOP - 0.02, 0]} s={[2.7, 0.04, 0.66]} c={STONE} />
-      {product ? <group position={TIN}>{product}</group> : <Tin lid={lid} scoop={scoop} clump={clump} />}
-      {cup ? (
+      {product ? <group position={TIN}>{product}</group> : <Tin lid={lid} scoop={scoop} clump={clump} label={label} note={note} />}
+      {stain > 0 ? [[-0.38, 0.12, 0.07], [-0.16, -0.06, 0.05], [-0.42, -0.1, 0.04], [-0.2, 0.2, 0.035]].map(([x, z, r], i) => (
+        <Sp key={i} p={[x, TOP + 0.001, z]} r={r * stain} c="#8E6E3C" sc={[1.3, 0.04, 1]} />
+      )) : null}
+      {board ? (
+        <group position={[0.62, TOP, 0.1]}>
+          <Bx p={[0, 0.01, 0]} s={[0.34, 0.02, 0.22]} c="#C9A27A" />
+          <Bx p={[0.05, 0.024, 0.085]} s={[0.2, 0.004, 0.03]} c="#C9CED3" />
+          <Bx p={[-0.08, 0.026, 0.085]} s={[0.09, 0.012, 0.022]} c="#2A2622" />
+          {raw ? <Sp p={[-0.03, 0.035, -0.03]} r={0.06} c="#C9545A" sc={[1.3, 0.35, 0.9]} /> : null}
+        </group>
+      ) : null}
+      {twist ? <group position={CUP}>{twist}</group> : cup ? (
         <group position={CUP}>
           <Cy p={[0, 0.05, 0]} r={0.036} h={0.1} c="#CFE3EE" seg={32} />
           <Cy p={[0, 0.098, 0]} r={0.033} h={0.004} c={lumps ? "#F2EEDF" : "#EAF4F8"} seg={32} />
@@ -106,5 +121,3 @@ export const Kitchen: React.FC<KitchenProps> = ({ lid, scoop, clump, cup, lumps,
 
 /** what every set gives the shot library: where things are, so one set of cameras works in any room */
 export const ANCHORS = { you: YOU_P, pet: CAT, petRy: -0.7, petS: 0.82, subject: TIN, subjectH: 0.16, aux: CUP, top: TOP };
-/** state keys the AI may set on this set (checked by the app before rendering) */
-export const STATE_KEYS = ["lid", "scoop", "clump", "cup", "lumps", "cold"];

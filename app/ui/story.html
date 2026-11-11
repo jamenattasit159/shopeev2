@@ -1,1 +1,106 @@
-<html></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Story Ad · Shopee Clip V2</title>
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    .nav-link { text-decoration: none; }
+    .story-layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+    .story-side { display: grid; gap: 16px; }
+    .story-side .panel, .review { padding: 18px 20px 20px; }
+    .story-side textarea, .scene-editor textarea { width: 100%; }
+    .story-side form .button { width: 100%; margin-top: 12px; }
+    .notice { border: 1px solid #6b5630; background: #2a2417; color: var(--amber); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; font-size: .9rem; }
+    .notice ul, .warnings ul { margin: 6px 0 0; padding-inline-start: 20px; }
+    .story-job { display: block; width: 100%; text-align: start; color: inherit; }
+    .story-job[aria-current="true"] { border-color: var(--orange); border-inline-start-color: var(--orange); }
+    .review-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; }
+    .review-head h2 { overflow-wrap: anywhere; }
+    .review-body { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 22px; margin-top: 18px; align-items: start; }
+    .review-body video, .review-body .cover { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; background: #090a0d; object-fit: cover; }
+    .warnings { border: 1px solid #6b5630; background: #2a2417; border-radius: 12px; padding: 12px 16px; font-size: .88rem; color: var(--amber); margin-bottom: 16px; }
+    .warnings strong { display: block; }
+    .strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; scroll-snap-type: x proximity; }
+    .scene { flex: none; width: 92px; padding: 0; border: 2px solid var(--edge); border-radius: 10px; background: var(--raised); color: var(--muted); overflow: hidden; scroll-snap-align: start; }
+    .scene img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; background: #090a0d; }
+    .scene span { display: block; padding: 3px 0 4px; font: 600 .78rem/1.3 "Segoe UI", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .scene[aria-pressed="true"] { border-color: var(--orange); color: var(--orange); }
+    .scene-editor { border-top: 1px solid var(--edge); margin-top: 6px; padding-top: 14px; }
+    .scene-editor .vo { font-size: 1.05rem; line-height: 1.6; }
+    .scene-editor .sub { color: var(--muted); font-size: .88rem; margin-top: 2px; }
+    .scene-editor .shots { color: var(--dim); font-size: .8rem; margin-top: 8px; font-family: Consolas, monospace; overflow-wrap: anywhere; }
+    .scene-editor label { display: block; margin-top: 14px; }
+    .scene-editor textarea { min-height: 76px; margin-top: 6px; }
+    .scene-editor .actions { margin-top: 10px; }
+    .finish { border-top: 1px solid var(--edge); margin-top: 18px; padding-top: 16px; justify-content: space-between; }
+    .caption { white-space: pre-wrap; background: var(--raised); border: 1px solid var(--edge); border-radius: 10px; padding: 12px 14px; font-size: .9rem; overflow-wrap: anywhere; margin-top: 8px; }
+    .progress { margin-top: 18px; }
+    .steps.seven { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    @media (max-width: 900px) {
+      .story-layout, .review-body { grid-template-columns: minmax(0, 1fr); }
+      .review-body video, .review-body .cover { max-width: 300px; margin-inline: auto; }
+      .steps.seven { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+  <script src="/story.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="3"/><path d="m3 7 16-4M8 5l3 3m3-4 3 3m-7 5 5 3-5 3z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5L19 7"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M4 5v5h5M4.5 10a8 8 0 1 1 1.7 7"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  </svg>
+
+  <a class="skip" href="#main">ข้ามไปที่เนื้อหา</a>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="/" aria-label="Shopee Clip V2 หน้าหลัก">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg></span>
+        <span>Shopee Clip <small>V2</small></span>
+      </a>
+      <div class="topbar-actions">
+        <a class="button subtle nav-link" href="/"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg><span>คิวคลิปรีวิว</span></a>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" id="main" tabindex="-1">
+    <div class="page-heading">
+      <h1>Story Ad</h1>
+      <span class="connection" id="connection" role="status"><span></span>กำลังเชื่อมต่อ</span>
+    </div>
+    <div class="notice" id="health" hidden></div>
+
+    <div class="story-layout">
+      <div class="story-side">
+        <section class="panel" aria-labelledby="new-heading">
+          <div class="section-title"><h2 id="new-heading">สร้างโฆษณาเล่าเรื่อง</h2></div>
+          <form id="link-form">
+            <label for="url">ลิงก์สินค้า Shopee</label>
+            <textarea id="url" rows="3" placeholder="https://shopee.co.th/…" required spellcheck="false" aria-describedby="url-hint"></textarea>
+            <p class="hint" id="url-hint">วางลิงก์เต็มของหน้าสินค้า 1 ลิงก์ ระบบจะทำถึงฉบับร่างเอง แล้วรอให้คุณตรวจทีละฉาก</p>
+            <button class="button primary" id="start" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> เริ่มสร้าง</button>
+            <p id="link-msg" class="feedback" role="status"></p>
+          </form>
+        </section>
+        <section aria-labelledby="jobs-heading">
+          <div class="section-title"><h2 id="jobs-heading">งานเล่าเรื่อง</h2><span class="count" id="job-count">—</span></div>
+          <p class="empty panel" id="jobs-empty" style="margin-top:12px;padding:16px">กำลังโหลด…</p>
+          <div class="job-list" id="jobs" style="margin-top:12px"></div>
+        </section>
+      </div>
+
+      <section class="panel review" id="review" aria-live="polite">
+        <p class="hint">เลือกงานทางซ้ายเพื่อตรวจ หรือวางลิงก์สินค้าเพื่อเริ่มงานใหม่</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

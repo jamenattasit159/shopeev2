@@ -1,20 +1,253 @@
 {
-  "set": "kitchen",
-  "scenes": [
-    { "line": 1, "cuts": [{ "shot": "subject", "card": { "type": "rule" } }, { "shot": "face", "you": "sleepy", "card": { "type": "tag" } }] },
-    { "line": 2, "cuts": [{ "shot": "wide", "you": "reach" }, { "shot": "pet-subject" }] },
-    { "line": 3, "cuts": [{ "shot": "subject", "card": { "type": "proof", "title": "นมผงที่เปิดแล้ว ควรใช้ให้หมดใน", "big": "4", "unit": "สัปดาห์", "note": "นับจากวันที่เปิดกระป๋อง", "source": "คำแนะนำบนฉลากนมผงทั่วไป (ตรวจกับยี่ห้อที่ใช้)" } }] },
-    { "line": 4, "cuts": [{ "shot": "subject", "you": "reach" }, { "shot": "face", "you": "look" }] },
-    { "line": 5, "cuts": [{ "shot": "pet", "card": { "type": "clock", "t": "02:05", "label": "ในครัว" } }, { "shot": "pet-subject" }] },
-    { "line": 6, "cuts": [{ "shot": "wide", "you": "reach" }, { "shot": "subject", "you": "reach", "state": { "lid": "off", "scoop": true } }] },
-    { "line": 7, "cuts": [{ "shot": "top", "you": "dig", "state": { "lid": "off", "scoop": true } }, { "shot": "face", "you": "dig", "state": { "lid": "off", "scoop": true } }] },
-    { "line": 8, "cuts": [{ "shot": "aux", "you": "reach", "state": { "lid": "off", "scoop": true, "cup": true }, "card": { "type": "clock", "t": "02:08", "label": "ในครัว" } }, { "shot": "aux", "you": "reach", "state": { "lid": "off", "scoop": true, "cup": true, "lumps": true } }] },
-    { "line": 9, "cuts": [{ "shot": "face", "you": "shock", "state": { "lid": "off", "cup": true, "lumps": true, "cold": 1 } }] },
-    { "line": 10, "cuts": [{ "shot": "subject-close", "state": { "cold": 1 } }] },
-    { "line": 11, "cuts": [{ "shot": "top", "you": "dig", "state": { "lid": "off", "clump": 1, "cold": 1 } }, { "shot": "pet-subject", "state": { "lid": "off", "clump": 1, "cold": 1, "cup": true, "lumps": true } }] },
-    { "line": 12, "cuts": [{ "shot": "product", "pet": "calm" }] },
-    { "line": 13, "cuts": [{ "shot": "product-open" }, { "shot": "photo", "card": { "type": "photo", "src": "scoop.png", "label": "ช้อนตวงแม่เหล็ก ติดกับฝา" } }] },
-    { "line": 14, "cuts": [{ "shot": "price", "pet": "calm", "card": { "type": "price", "amount": "179" } }] },
-    { "line": 15, "cuts": [{ "shot": "wide", "you": "relief", "pet": "sleep", "state": { "product": true, "cup": true } }] }
-  ]
+ "set": "kitchen",
+ "subject": {
+  "label": "นมผง",
+  "note": "เปิดมาแล้ว 19 วัน"
+ },
+ "scenes": [
+  {
+   "line": 1,
+   "cuts": [
+    {
+     "shot": "subject",
+     "card": {
+      "type": "rule"
+     }
+    },
+    {
+     "shot": "face",
+     "you": "sleepy",
+     "card": {
+      "type": "tag"
+     }
+    }
+   ]
+  },
+  {
+   "line": 2,
+   "cuts": [
+    {
+     "shot": "wide",
+     "you": "reach"
+    },
+    {
+     "shot": "pet-subject"
+    }
+   ]
+  },
+  {
+   "line": 3,
+   "cuts": [
+    {
+     "shot": "subject",
+     "card": {
+      "type": "proof",
+      "title": "นมผงที่เปิดแล้ว ควรใช้ให้หมดใน",
+      "big": "4",
+      "unit": "สัปดาห์",
+      "note": "นับจากวันที่เปิดกระป๋อง",
+      "source": "คำแนะนำบนฉลากนมผงทั่วไป (ตรวจกับยี่ห้อที่ใช้)"
+     }
+    }
+   ]
+  },
+  {
+   "line": 4,
+   "cuts": [
+    {
+     "shot": "subject",
+     "you": "reach"
+    },
+    {
+     "shot": "face",
+     "you": "look"
+    }
+   ]
+  },
+  {
+   "line": 5,
+   "cuts": [
+    {
+     "shot": "pet",
+     "card": {
+      "type": "clock",
+      "t": "02:05",
+      "label": "ในครัว"
+     }
+    },
+    {
+     "shot": "pet-subject"
+    }
+   ]
+  },
+  {
+   "line": 6,
+   "cuts": [
+    {
+     "shot": "wide",
+     "you": "reach"
+    },
+    {
+     "shot": "subject",
+     "you": "reach",
+     "state": {
+      "lid": "off",
+      "scoop": true
+     }
+    }
+   ]
+  },
+  {
+   "line": 7,
+   "cuts": [
+    {
+     "shot": "top",
+     "you": "dig",
+     "state": {
+      "lid": "off",
+      "scoop": true
+     }
+    },
+    {
+     "shot": "face",
+     "you": "dig",
+     "state": {
+      "lid": "off",
+      "scoop": true
+     }
+    }
+   ]
+  },
+  {
+   "line": 8,
+   "cuts": [
+    {
+     "shot": "aux",
+     "you": "reach",
+     "state": {
+      "lid": "off",
+      "scoop": true,
+      "cup": true
+     },
+     "card": {
+      "type": "clock",
+      "t": "02:08",
+      "label": "ในครัว"
+     }
+    },
+    {
+     "shot": "aux",
+     "you": "reach",
+     "state": {
+      "lid": "off",
+      "scoop": true,
+      "cup": true,
+      "lumps": true
+     }
+    }
+   ]
+  },
+  {
+   "line": 9,
+   "cuts": [
+    {
+     "shot": "face",
+     "you": "shock",
+     "state": {
+      "lid": "off",
+      "cup": true,
+      "lumps": true,
+      "cold": 1
+     }
+    }
+   ]
+  },
+  {
+   "line": 10,
+   "cuts": [
+    {
+     "shot": "subject-close",
+     "state": {
+      "cold": 1
+     }
+    }
+   ]
+  },
+  {
+   "line": 11,
+   "cuts": [
+    {
+     "shot": "top",
+     "you": "dig",
+     "state": {
+      "lid": "off",
+      "clump": 1,
+      "cold": 1
+     }
+    },
+    {
+     "shot": "pet-subject",
+     "state": {
+      "lid": "off",
+      "clump": 1,
+      "cold": 1,
+      "cup": true,
+      "lumps": true
+     }
+    }
+   ]
+  },
+  {
+   "line": 12,
+   "cuts": [
+    {
+     "shot": "product",
+     "pet": "calm"
+    }
+   ]
+  },
+  {
+   "line": 13,
+   "cuts": [
+    {
+     "shot": "product-open"
+    },
+    {
+     "shot": "photo",
+     "card": {
+      "type": "photo",
+      "src": "scoop.png",
+      "label": "ช้อนตวงแม่เหล็ก ติดกับฝา"
+     }
+    }
+   ]
+  },
+  {
+   "line": 14,
+   "cuts": [
+    {
+     "shot": "price",
+     "pet": "calm",
+     "card": {
+      "type": "price",
+      "amount": "179"
+     }
+    }
+   ]
+  },
+  {
+   "line": 15,
+   "cuts": [
+    {
+     "shot": "wide",
+     "you": "relief",
+     "pet": "sleep",
+     "state": {
+      "product": true,
+      "cup": true
+     }
+    }
+   ]
+  }
+ ]
 }

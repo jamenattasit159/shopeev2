@@ -12,15 +12,17 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(path.join(path.dirname(fileURLToPath(import.meta.url)), "../render/package.json"));
 const { GoogleGenAI } = require("@google/genai");
 
-const [dir, voice] = process.argv.slice(2);
+// --fix re-voices ONE line: reads vo/fix.txt, writes vo/fix.mp3 (input of scripts/revoice.py)
+const [dir, voice, mode] = process.argv.slice(2);
+const FIX = mode === "--fix";
 const MODEL = "gemini-3.8-flash-tts";
 const STYLE = "เล่าเรื่องระทึก จังหวะกระชับ น้ำเสียงตึงเครียด เน้นคำว่าอย่าและห้ามให้หนักแน่น";
 const POLISH = "highpass=f=80,acompressor=threshold=-18dB:ratio=3:attack=5:release=80,equalizer=f=3000:t=q:w=1:g=3,atempo=1.04,loudnorm=I=-14:TP=-1.5:LRA=11";
 const MAX = 450, GAP_MS = 12000;
 
-const md = fs.readFileSync(path.join(dir, "script.md"), "utf8");
-const text = (md.match(/```\n([\s\S]*?)\n```/)?.[1] ?? "").replace(/\s+/g, " ").trim();
-if (!text) { console.error("script.md has no narration block"); process.exit(2); }
+const md = FIX ? "" : fs.readFileSync(path.join(dir, "script.md"), "utf8");
+const text = (FIX ? fs.readFileSync(path.join(dir, "vo", "fix.txt"), "utf8") : md.match(/```\r?\n([\s\S]*?)\r?\n```/)?.[1] ?? "").replace(/\s+/g, " ").trim();
+if (!text) { console.error(FIX ? "vo/fix.txt is empty" : "script.md has no narration block"); process.exit(2); }
 // split at spaces (sentence gaps) into pieces the model handles well
 const parts = [];
 for (const s of text.split(" ")) {
@@ -64,6 +66,7 @@ for (const t of parts) {
 }
 const vo = path.join(dir, "vo");
 const filter = files.map((_, i) => `[${i}:a]`).join("") + `concat=n=${files.length}:v=0:a=1,${POLISH}`;
-execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...files.flatMap((f) => ["-i", f]), "-filter_complex", filter, "-ar", "24000", "-ac", "1", path.join(vo, "own.wav")]);
-execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", path.join(vo, "own.wav"), "-b:a", "192k", path.join(vo, "takeA.mp3")]);
+const wavOut = path.join(vo, FIX ? "fix.wav" : "own.wav");
+execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...files.flatMap((f) => ["-i", f]), "-filter_complex", filter, "-ar", "24000", "-ac", "1", wavOut]);
+execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", wavOut, "-b:a", "192k", path.join(vo, FIX ? "fix.mp3" : "takeA.mp3")]);
 console.log(JSON.stringify({ chunks: files.length }));

@@ -24,8 +24,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   return true;
 });
 
-chrome.action.onClicked.addListener((tab) => {
+// A tab opened before the extension was (re)loaded has no content script: put it in, then ask again.
+function collectFrom(tab, done) {
   chrome.tabs.sendMessage(tab.id, { type: "collect" }, (res) => {
+    if (!chrome.runtime.lastError) return done(res);
+    if (!/^https:\/\/([a-z0-9-]+\.)?shopee\.co\.th\//.test(tab.url || "")) return done({ ok: false, error: "ใช้ได้เฉพาะหน้าสินค้า Shopee" });
+    chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] }, () => {
+      if (chrome.runtime.lastError) return done({ ok: false, error: "อ่านหน้านี้ไม่ได้ รีเฟรชหน้าแล้วลองอีกครั้ง" });
+      chrome.tabs.sendMessage(tab.id, { type: "collect" }, (again) => done(chrome.runtime.lastError ? { ok: false, error: "อ่านหน้านี้ไม่ได้ รีเฟรชหน้าแล้วลองอีกครั้ง" } : again));
+    });
+  });
+}
+
+chrome.action.onClicked.addListener((tab) => {
+  collectFrom(tab, (res) => {
     const ok = res?.ok;
     chrome.action.setBadgeText({ tabId: tab.id, text: ok ? "OK" : "!" });
     chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: ok ? "#157347" : "#b3261e" });

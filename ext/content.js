@@ -1,3 +1,6 @@
+// Injected again on demand (toolbar click on an old tab): run once per page.
+if (!window.__shopeeClip) {
+window.__shopeeClip = true;
 // Reads the product's gallery and visible page text for the local clip generator.
 const isProduct = () => /-i\.\d+\.\d+|\/product\/\d+\/\d+/.test(location.pathname);
 const mediaUrl = (raw) => raw?.match(/https:\/\/[a-z0-9.-]+susercontent\.com\/file\/[A-Za-z0-9_.-]+/)?.[0].replace(/_tn$/, "");
@@ -51,4 +54,5 @@ if (isProduct()) {
       if (hasHeading && data.images.length) chrome.runtime.sendMessage({ type: "ingest", data, onlyIfWaiting: true });
     }
   }, 1000);
+}
 }

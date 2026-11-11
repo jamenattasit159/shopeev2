@@ -14,10 +14,17 @@ export const Cover: React.FC = () => (
     <Film noCaps />
     <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(5,6,12,0.9) 0%, rgba(5,6,12,0.75) 34%, rgba(5,6,12,0.45) 42%, transparent 54%)" }} />
     <div style={{ position: "absolute", top: 330, left: 0, right: 0, textAlign: "center", fontFamily: SANS }}>
-      <div style={{ color: EP.color, fontSize: 150, fontWeight: 800, lineHeight: 1.1, textShadow: shadow }}>{EP.series}</div>
-      <div style={{ color: "#F6F4EE", fontSize: 68, fontWeight: 700, lineHeight: 1.25, marginTop: 6, textShadow: shadow }}>
-        <span style={{ color: EP.color }}>{`ตอนที่ ${EP.ep}/${EP.of}`}</span>{` · ${EP.title}`}
-      </div>
+      {EP.of > 1 ? (
+        <>
+          <div style={{ color: EP.color, fontSize: 150, fontWeight: 800, lineHeight: 1.1, textShadow: shadow }}>{EP.series}</div>
+          <div style={{ color: "#F6F4EE", fontSize: 68, fontWeight: 700, lineHeight: 1.25, marginTop: 6, textShadow: shadow }}>
+            <span style={{ color: EP.color }}>{`ตอนที่ ${EP.ep}/${EP.of}`}</span>{` · ${EP.title}`}
+          </div>
+        </>
+      ) : (
+        // a single ad: the story's title carries the cover
+        <div style={{ color: EP.color, fontSize: 112, fontWeight: 800, lineHeight: 1.15, padding: "0 60px", textShadow: shadow }}>{EP.title}</div>
+      )}
       <div style={{ display: "inline-block", marginTop: 20, background: RED, color: "#FFF6EE", fontSize: 70, fontWeight: 700, padding: "4px 30px 10px", borderRadius: 14 }}>{EP.rule}</div>
     </div>
   </AbsoluteFill>

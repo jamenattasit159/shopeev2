@@ -15,7 +15,8 @@ for (const job of jobs) {
   const cut = job.indexOf(":");
   const out = job.slice(cut + 1);
   const frame = Math.min(composition.durationInFrames - 1, job.slice(0, cut) === "last" ? Infinity : Math.max(0, Number(job.slice(0, cut)) || 0));
-  await renderStill({ composition, serveUrl, frame, output: path.resolve(out), imageFormat: /\.png$/i.test(out) ? "png" : "jpeg", jpegQuality: 90, chromiumOptions });
+  const png = /\.png$/i.test(out); // the renderer refuses a jpeg quality on png output
+  await renderStill({ composition, serveUrl, frame, output: path.resolve(out), imageFormat: png ? "png" : "jpeg", ...(png ? {} : { jpegQuality: 90 }), chromiumOptions });
   ok.push(out);
 }
 console.log(JSON.stringify({ ok }));

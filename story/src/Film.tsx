@@ -10,6 +10,8 @@ import { Captions } from "./ui/captions";
 import { Clock, NextCard, ProofCard, RuleSign, RuleTag } from "./ui/cards";
 import * as Custom from "./custom";
 import FILM from "./film.json";
+import { CrayonView } from "./styles/crayon/CrayonView";
+import { ToonView } from "./styles/toon/ToonView";
 
 /** per-clip 3D pieces (src/custom.tsx). null = not made for this clip: the product is shown as the real shop photo */
 const Product = ((Custom as Record<string, unknown>).Product ?? null) as React.FC<{ open?: number }> | null;
@@ -25,7 +27,7 @@ type Card =
   | { type: "photo"; src: string; label?: string } | { type: "price"; amount: string; src?: string };
 type CutPlan = { shot: string; you?: string; pet?: string; noPet?: boolean; state?: Record<string, unknown>; card?: Card };
 type ScenePlan = { line: number; cuts: CutPlan[] };
-type FilmPlan = { set?: string; seed?: number; subject?: { label?: string; note?: string }; scenes: ScenePlan[] };
+type FilmPlan = { set?: string; seed?: number; style?: string; subject?: { label?: string; note?: string }; scenes: ScenePlan[] };
 const PLAN = FILM as unknown as FilmPlan;
 const SCENES = PLAN.scenes;
 /** the room this clip plays in; `set` on a component overrides it (used by the library check) */
@@ -135,7 +137,21 @@ const Opening: React.FC<Scene> = (s) => {
   return <View cam="subject" {...s} noPet product={Math.min(1, Math.max(0, (f - 6) / 12))} />;
 };
 
+/** the same cut drawn by a 2D style template ("crayon" picture book, "toon" 1930s cartoon) */
+const PageCut: React.FC<{ c: CutPlan }> = ({ c }) => {
+  const f = useCurrentFrame();
+  const photo = c.shot === "photo" || c.shot === "price";
+  const shot = photo ? "wide" : c.shot;
+  const product = c.shot === "product-open" ? Math.min(1, Math.max(0, (f - 6) / 12)) : c.shot === "product" || photo ? 1 : undefined;
+  const View2D = PLAN.style === "toon" ? ToonView : CrayonView;
+  const page = <View2D shot={shot} set={React.useContext(SetCtx) ?? "kitchen"} seed={SEED} label={PLAN.subject?.label}
+    state={c.state} you={c.you} pet={c.pet} noPet={c.noPet} product={product} />;
+  if (photo) return <><BlurIn px={6}>{page}</BlurIn><CardView c={c.card ?? { type: "photo", src: "product.png" }} /></>;
+  return <>{page}<CardView c={c.card} /></>;
+};
+
 export const CutView: React.FC<{ c: CutPlan }> = ({ c }) => {
+  if (PLAN.style === "crayon" || PLAN.style === "toon") return <PageCut c={c} />;
   const s: Scene = { you: YOU_POSES[c.you ?? "rest"], pet: PET_POSES[c.pet ?? "stare"], noPet: c.noPet, state: c.state };
   const has3d = Product !== null;
   let picture: React.ReactNode;
@@ -181,6 +197,6 @@ export const Film: React.FC<{ noCaps?: boolean }> = ({ noCaps }) => (
     <Vig a={0.4} />
     <FadeOut from={DUR - 24} />
     <Grain amount={0.045} />
-    {noCaps ? null : <Captions hideFrom={END} />}
+    {noCaps ? null : <Captions hideFrom={END} paper={PLAN.style === "crayon"} />}
   </AbsoluteFill>
 );

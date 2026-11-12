@@ -216,6 +216,11 @@ function activeJob(job) {
 
   const message = el("p", "feedback");
   message.setAttribute("role", "status");
+  if (!idle) {
+    const actions = el("div", "actions");
+    actions.append(button("ยกเลิกงาน", "cancel", null, "subtle"));
+    card.append(actions);
+  }
   if (idle) {
     const actions = el("div", "actions");
     if (job.state === "ready") {
@@ -401,6 +406,14 @@ document.addEventListener("click", (event) => {
     case "upload":
       row.querySelector("input[type=file]").click();
       break;
+    case "cancel":
+      if (!confirm("ยกเลิกงานนี้? ส่วนที่ทำค้างไว้จะหยุดทันที")) break;
+      withBusy(control, $("queue-message"), async () => {
+        await api(jobPath(job) + "/cancel", { method: "POST" });
+        await refresh();
+        feedback($("queue-message"), "ยกเลิกงานแล้ว");
+      });
+      break;
     case "rerun":
       if (uploadingJobs.has(job.id)) break;
       withBusy(control, $("queue-message"), async () => {
@@ -494,6 +507,8 @@ function loadConfig() {
         select.replaceChildren(new Option("สุ่มแนวสคริปต์", ""), ...config.styles.map((s) => new Option(STYLE_LABELS[s] || s, s)));
       }
       for (const key of KEYS) $("m-" + key).value = config.models[key];
+      $("m-claude-code").value = config.models.claude_code || "";
+      $("m-effort").value = config.models.effort || "";
       $("voice").value = config.voice;
       $("export").value = config.export_dir;
       applyKeys(config);
@@ -541,7 +556,7 @@ $("settings-form").addEventListener("submit", (event) => {
         director: $("director").value.split(",").map((s) => s.trim()).filter(Boolean),
         voice: $("voice").value,
         export_dir: $("export").value,
-        models: Object.fromEntries(KEYS.map((key) => [key, $("m-" + key).value])),
+        models: { ...Object.fromEntries(KEYS.map((key) => [key, $("m-" + key).value])), claude_code: $("m-claude-code").value.trim(), effort: $("m-effort").value },
         keys: Object.fromEntries(KEYS.map((key) => [key, $("k-" + key).value])),
       }),
     });

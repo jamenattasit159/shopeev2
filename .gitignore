@@ -29,3 +29,15 @@ story/public/img*.png
 
 # owner link lists
 *.csv
+
+# the job being rendered: the app writes these before every render (fresh clone: copy them from story/sample/)
+story/src/film.json
+story/src/episode.json
+story/src/lines.json
+story/src/custom.tsx
+story/public/product.png
+
+# local sample renders and the lemo style contact sheet (large, regenerable; the sheet holds CC BY images)
+story-ad/*-sample.mp4
+story-ad/*-draft.mp4
+story-ad/style-options.jpg

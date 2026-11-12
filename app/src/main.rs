@@ -39,10 +39,14 @@ pub struct Models {
     pub gemini: String,
     pub claude: String,
     pub gpt: String,
+    /// model for the Claude Code CLI ("claude-cli" director and the 3D product model); "" = the CLI's own default
+    pub claude_code: String,
+    /// Claude Code effort: "" (CLI default) | low | medium | high | xhigh | max
+    pub effort: String,
 }
 impl Default for Models {
     fn default() -> Self {
-        Self { gemini: "gemini-2.5-flash".into(), claude: "claude-sonnet-5-5".into(), gpt: String::new() }
+        Self { gemini: "gemini-3.8-flash".into(), claude: "claude-sonnet-5-5".into(), gpt: String::new(), claude_code: String::new(), effort: String::new() }
     }
 }
 
@@ -101,6 +105,8 @@ pub struct App {
     queue: mpsc::UnboundedSender<String>,
     job_mutations: Mutex<()>,
     shutdown: watch::Sender<bool>,
+    /// the job the worker is running now, so it can be cancelled
+    running: Mutex<Option<(String, tokio::task::AbortHandle)>>,
 }
 type Shared = Arc<App>;
 
@@ -397,6 +403,31 @@ async fn ingest(State(app): State<Shared>, Json(mut p): Json<Product>) -> Api<Js
     Ok(Json(json!({"job": job.id})))
 }
 
+/// Stops a queued or running job. Its child processes (render, voice, AI CLIs) die with it (kill_on_drop).
+/// A story job that already has a draft goes back to review; anything else ends as cancelled.
+async fn cancel_job(State(app): State<Shared>, UrlPath(id): UrlPath<String>) -> Api<Json<Value>> {
+    let _mutation = app.begin_job_mutation()?;
+    let mut job = app.load_job(checked_job_id(&id)?)?;
+    need(matches!(job.state.as_str(), "queued" | "running"), "งานนี้ไม่ได้อยู่ในคิวหรือกำลังทำ")?;
+    if let Some((rid, handle)) = app.running.lock().expect("running lock").as_ref() {
+        if *rid == id {
+            handle.abort();
+        }
+    }
+    let story_dir = app.job_dir(&id).join("story");
+    let _ = std::fs::remove_file(story_dir.join("todo.json"));
+    if job.kind == story::KIND && story_dir.join("draft.mp4").is_file() {
+        job.state = "review".into();
+        job.stage = "รอตรวจ".into();
+        job.warnings.push("ยกเลิกงานล่าสุดแล้ว ฉบับร่างเดิมยังอยู่ (ฉากที่เรนเดอร์ไปบางส่วนอาจเปลี่ยนแล้ว)".into());
+    } else {
+        job.state = "error".into();
+        job.error = "ยกเลิกแล้ว".into();
+    }
+    app.save_job(&job)?;
+    Ok(Json(json!({"ok": true})))
+}
+
 async fn rerun(State(app): State<Shared>, UrlPath(id): UrlPath<String>) -> Api<Json<Value>> {
     let _mutation = app.begin_job_mutation()?;
     checked_job_id(&id)?;
@@ -464,6 +495,9 @@ async fn set_config(State(app): State<Shared>, Json(req): Json<ConfigReq>) -> Ap
     let c = &mut *guard;
     let director: Vec<String> = req.director.into_iter().filter(|p| llm::PROVIDERS.contains(&p.as_str())).collect();
     need(!director.is_empty(), "ต้องเลือกผู้ให้บริการ AI อย่างน้อย 1 ทาง")?;
+    // both reach a command line: only known effort words and plain model ids
+    need(llm::EFFORTS.contains(&req.models.effort.as_str()), "ระดับ effort ไม่ถูกต้อง")?;
+    need(req.models.claude_code.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '[' | ']')), "ชื่อโมเดล Claude Code ไม่ถูกต้อง")?;
     c.director = director;
     c.voice = req.voice.trim().to_string();
     c.export_dir = req.export_dir.trim().to_string();
@@ -530,7 +564,7 @@ async fn main() -> Result<()> {
     let port = cfg.port;
     let (tx, mut rx) = mpsc::unbounded_channel::<String>();
     let (shutdown, mut shutdown_signal) = watch::channel(false);
-    let app = Arc::new(App { root: root.clone(), cfg: RwLock::new(cfg.clone()), queue: tx, job_mutations: Mutex::new(()), shutdown });
+    let app = Arc::new(App { root: root.clone(), cfg: RwLock::new(cfg.clone()), queue: tx, job_mutations: Mutex::new(()), shutdown, running: Mutex::new(None) });
     if !cfg_path.exists() {
         app.save_cfg(&cfg)?;
     }
@@ -548,7 +582,12 @@ async fn main() -> Result<()> {
                 id = rx.recv() => id,
             };
             let Some(id) = id else { break };
-            pipeline::run_job(&worker, &id).await;
+            let w = worker.clone();
+            let run_id = id.clone();
+            let task = tokio::spawn(async move { pipeline::run_job(&w, &run_id).await });
+            *worker.running.lock().expect("running lock") = Some((id, task.abort_handle()));
+            let _ = task.await; // an aborted job ends here; cancel_job has already recorded its state
+            *worker.running.lock().expect("running lock") = None;
         }
     });
 
@@ -563,6 +602,7 @@ async fn main() -> Result<()> {
         .route("/api/links", post(add_links))
         .route("/api/ingest", post(ingest))
         .route("/api/jobs/{id}/run", post(rerun))
+        .route("/api/jobs/{id}/cancel", post(cancel_job))
         .route("/api/jobs/{id}/clip", put(upload_clip).layer(DefaultBodyLimit::max(1024 * 1024 * 1024)))
         .route("/api/config", get(get_config).post(set_config))
         .route("/api/test", post(test_provider))
@@ -575,6 +615,9 @@ async fn main() -> Result<()> {
         .route("/api/story/{id}", get(story::detail))
         .route("/api/story/{id}/scene/{scene}", post(story::edit))
         .route("/api/story/{id}/confirm", post(story::confirm))
+        .route("/api/story/{id}/style", post(story::set_style))
+        .route("/api/story/styles", get(story::styles))
+        .nest_service("/story-styles", tower_http::services::ServeDir::new(root.join("story/styles-preview")))
         .route("/api/story/{id}/restart", post(story::restart))
         .route("/api/story/{id}/retry", post(story::retry))
         .nest_service("/files", tower_http::services::ServeDir::new(root.join("jobs")))
@@ -616,7 +659,7 @@ mod tests {
         std::fs::create_dir(&path).unwrap();
         let root = TestRoot(path);
         let (queue, _) = mpsc::unbounded_channel();
-        let app = Arc::new(App { root: root.0.clone(), cfg: RwLock::new(Config::default()), queue, job_mutations: Mutex::new(()), shutdown: watch::channel(false).0 });
+        let app = Arc::new(App { root: root.0.clone(), cfg: RwLock::new(Config::default()), queue, job_mutations: Mutex::new(()), shutdown: watch::channel(false).0, running: Mutex::new(None) });
         let job = Job {
             id: "123456789".into(),
             url: "https://shopee.co.th/product/123/123456789".into(),

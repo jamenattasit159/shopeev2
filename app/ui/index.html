@@ -192,6 +192,12 @@
           <div><label for="m-gpt">โมเดล GPT</label><input id="m-gpt" autocomplete="off"></div>
           <div><label for="k-gpt">GPT API key <span class="hint" id="has-gpt"></span></label><input id="k-gpt" type="password" autocomplete="off"></div>
         </div>
+        <div class="field-row">
+          <div><label for="m-claude-code">โมเดล Claude Code (แพ็กเกจรายเดือน)</label><input id="m-claude-code" autocomplete="off" placeholder="เว้นว่าง = ค่าเริ่มต้นของ CLI เช่น claude-opus-5-5"></div>
+          <div><label for="m-effort">Effort ของ Claude Code</label>
+            <select id="m-effort"><option value="">ค่าเริ่มต้นของ CLI</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option><option value="max">max</option></select></div>
+        </div>
+        <p class="hint">ใช้กับ claude-cli (เขียนบท) และการทำโมเดลสินค้า 3 มิติ effort สูงขึ้นได้งานละเอียดขึ้น แต่ช้าและกินโควตามากขึ้น</p>
       </fieldset>
       <fieldset>
         <legend>เสียงพากย์และไฟล์ส่งออก</legend>

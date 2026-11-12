@@ -148,9 +148,27 @@ pub struct Row {
     pub cuts: Vec<Cut>,
 }
 
+/// Picture styles. The plan (film.json) is the same for all of them; only the renderer changes, so a draft can switch style
+/// without a new script or voice. (id, what it looks like, what it suits) — the AI recommends one, the owner may pick another.
+pub const STYLES: [(&str, &str, &str); 3] = [
+    ("3d", "แอนิเมชัน 3 มิติ ตัวละครดินปั้น แสงอุ่นแบบโมเดลจำลอง", "ของใช้ทั่วไป สินค้าที่อยากให้ดูจริงจังน่าเชื่อถือ"),
+    ("crayon", "สมุดภาพเด็กวาดด้วยสีเทียนบนกระดาษ เส้นสั่นแบบวาดมือ สีน้ำระบายตอนกลางคืน", "ของเด็ก แม่และเด็ก ของใช้ในบ้านที่อบอุ่น เรื่องซึ้ง"),
+    ("toon", "การ์ตูนขาวดำยุค 1930 ตาชิ้นพาย ถุงมือขาว ของทุกชิ้นมีหน้าและเต้นตามจังหวะ ฟิล์มเก่า สินค้าจริงเป็นภาพสีชิ้นเดียว", "ของใช้ในบ้าน ทำความสะอาด เครื่องครัว เรื่องตลก สินค้าที่อยากให้เด่นสะดุดตา"),
+];
+pub fn style_ok(id: &str) -> bool {
+    id.is_empty() || STYLES.iter().any(|s| s.0 == id)
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Script {
+    /// picture style (STYLES); empty = "3d"
+    pub style: String,
+    /// why the AI picked that style for this product (shown on the review page)
+    #[serde(rename = "styleWhy")]
+    pub style_why: String,
+    /// the AI's own pick, kept when the owner switches style
+    pub recommended: String,
     /// how the story is told (ANGLES)
     pub angle: String,
     /// 1-based row where the story turns (see ANGLES); for "twist" it is the "ยกเว้นเรื่องเดียว" row
@@ -256,8 +274,14 @@ pub fn validate(s: &Script, source: &str, banned: &[String]) -> Vec<String> {
             errs.push("แถว 1 ต้องมีตัวเลขหรือเวลา (เขียนเป็นคำ)".into());
         }
     }
+    if !style_ok(&s.style) {
+        errs.push(format!("ไม่มีรูปแบบภาพ \"{}\"", s.style));
+    }
     if !s.angle.is_empty() && !ANGLES.iter().any(|a| a.0 == s.angle) {
         errs.push(format!("ไม่มีมุมเล่า \"{}\"", s.angle));
+    }
+    if s.rows.iter().filter(|r| r.vo.contains("คุณทำถูก")).count() > 1 {
+        errs.push("ประโยค \"คุณทำถูก...\" ใช้ได้แถวเดียว".into());
     }
     let twist = turn_index(s);
     match twist {
@@ -378,7 +402,7 @@ fn script_prompt(title: &str, source: &str, images: usize, angle: &str, recent: 
 3. ข้อเท็จจริงหนึ่งข้อที่มีตัวเลข ช่วยยกเดิมพัน
 4. แมว (ตั้งชื่อไทยสั้นๆ ไม่ซ้ำกับเรื่องก่อนๆ) มีบทบาทในเรื่อง
 5. กลางเรื่อง: {angle_middle}
-6. จุดเปลี่ยน: {angle_turn} ใส่เลขแถวนี้ใน "turnRow"
+6. จุดเปลี่ยน: {angle_turn} ใส่เลขแถวนี้ใน "turnRow" สิ่งที่เฉลยต้องเป็นสาเหตุที่สินค้านี้กำจัดได้ตรงๆ ใช้สินค้าแล้วสาเหตุนั้นต้องหายไป ห้ามเฉลยเป็นของอื่นที่สินค้าไม่เกี่ยว
 7. สินค้าเข้ามาเป็นคำตอบของปัญหานั้น 2-3 แถวหลังจุดเปลี่ยน พูดเฉพาะคุณสมบัติที่มีในข้อมูลสินค้า แล้ว{price_rule}
 8. แถวสุดท้ายเป็นประโยคปิดสั้นๆ ที่วนกลับไปที่สถานการณ์ตอนต้น
 
@@ -399,8 +423,13 @@ fn script_prompt(title: &str, source: &str, images: usize, angle: &str, recent: 
 
 มีรูปสินค้าจริง {images} รูป: product.png (รูปหลัก) และ img1.png เป็นต้นไป
 
+รูปแบบภาพ: เลือกหนึ่งแบบที่เข้ากับสินค้าและคนซื้อที่สุด ใส่ใน "style" และเหตุผลสั้นๆ ใน "styleWhy"
+{styles}
+
 ตอบเป็น JSON อย่างเดียว:
 {{
+  "style": "3d หรือ crayon หรือ toon",
+  "styleWhy": "เหตุผลหนึ่งประโยค",
   "angle": "{angle_id}",
   "turnRow": 0,
   "set": "kitchen หรือ bedroom หรือ bathroom",
@@ -428,6 +457,8 @@ fn script_prompt(title: &str, source: &str, images: usize, angle: &str, recent: 
 ข้อมูลจากหน้าสินค้า:
 {source}"##,
         library = library_doc(None),
+        styles = STYLES.iter().map(|(id, look, suits)| format!("- {id}: {look} เหมาะกับ {suits}")).collect::<Vec<_>>().join("
+"),
     )
 }
 
@@ -473,9 +504,14 @@ pub fn pick_angle(seed: u64, recent: &[String]) -> &'static str {
 async fn off_topic(app: &App, title: &str, source: &str, s: &Script, recent: &[String]) -> Option<String> {
     let cfg = app.cfg.read().await.clone();
     let story: Vec<&str> = s.rows.iter().map(|r| r.vo.as_str()).collect();
+    // the turn and the row that explains it: judged as a whole story, an unrelated reveal slipped through
+    let reveal: Vec<&str> = turn_index(s).map(|t| s.rows.iter().skip(t).take(2).map(|r| r.vo.as_str()).collect()).unwrap_or_default();
     let prompt = format!(
         "ตรวจบทโฆษณาสั้นนี้ ตอบ JSON อย่างเดียว: {{\"fits\": true หรือ false, \"reason\": \"เหตุผลสั้นๆ\"}}
-fits เป็น true เมื่อปัญหาหลักของเรื่องคือสิ่งที่สินค้านี้ใช้แก้โดยตรงตามวิธีใช้ปกติของมัน และคนดูดูจบแล้วรู้ว่าสินค้าคืออะไร
+fits เป็น true เมื่อผ่านทั้งสามข้อ:
+1. ปัญหาหลักของเรื่องคือสิ่งที่สินค้านี้ใช้แก้โดยตรงตามวิธีใช้ปกติของมัน และคนดูดูจบแล้วรู้ว่าสินค้าคืออะไร
+2. สิ่งที่เฉลยในจุดเปลี่ยน (ด้านล่าง) คือสาเหตุที่สินค้านี้กำจัดได้ตรงๆ ถ้าใช้สินค้าแล้วสาเหตุนั้นยังอยู่ (เช่น เฉลยว่าปลั๊กโคมไฟหลวม แต่สินค้าเป็นเครื่องกล่อมนอน) ให้ fits เป็น false
+3. สินค้าที่เข้ามาตอนท้ายพูดถึงการแก้สาเหตุนั้น
 fits เป็น false เมื่อเรื่องเป็นเรื่องของสินค้าประเภทอื่น และสินค้านี้ถูกยัดเข้ามาเป็นตัวช่วยข้างๆ
 fits เป็น false ด้วย ถ้าสถานการณ์ เวลา หรือกฎ ซ้ำหรือคล้ายมากกับเรื่องที่ช่องเคยทำ:
 {done}
@@ -483,8 +519,12 @@ fits เป็น false ด้วย ถ้าสถานการณ์ เว
 สินค้า: {title}
 ข้อมูลสินค้า (ย่อ): {info}
 
+จุดเปลี่ยนและเฉลย:
+{reveal}
+
 บท:
 {story}",
+        reveal = if reveal.is_empty() { "(ไม่พบ)".to_string() } else { reveal.join("\n") },
         info = source.chars().take(1500).collect::<String>(),
         story = story.join("\n"),
         done = if recent.is_empty() { "(ยังไม่มี)".to_string() } else { recent.join("\n") },
@@ -567,7 +607,8 @@ fn film_json(s: &Script, seed: u64) -> Value {
     let scenes: Vec<Value> = s.rows.iter().enumerate().map(|(i, r)| json!({"line": i + 1, "cuts": r.cuts})).collect();
     // the seed picks wall colour, clothes and the cat, so clips from the same three rooms do not look alike
     let subject = json!({"label": s.subject_label.trim(), "note": s.subject_note.trim()});
-    json!({"set": set_of(&s.set).map_or("kitchen", |d| d.name), "seed": seed % 1000, "subject": subject, "scenes": scenes})
+    let style = if s.style.is_empty() { "3d" } else { s.style.as_str() };
+    json!({"set": set_of(&s.set).map_or("kitchen", |d| d.name), "style": style, "seed": seed % 1000, "subject": subject, "scenes": scenes})
 }
 
 fn episode_json(s: &Script) -> Value {
@@ -809,7 +850,8 @@ async fn make_custom(app: &App, job: &Job, dir: &Path, s: &Script, instruction: 
     let mut prompt = base.clone();
     let mut last = String::new();
     for _ in 0..2 {
-        let reply = llm::claude_code(&prompt, &jdir).await?;
+        let cfg = app.cfg.read().await.clone();
+        let reply = llm::claude_code(&cfg, &prompt, &jdir).await?;
         let problem = match fenced(&reply) {
             None => "คำตอบไม่มีบล็อกโค้ด ```tsx".to_string(),
             Some(code) => match try_custom(app, dir, &code).await {
@@ -853,6 +895,7 @@ fn uses_custom(row: &Row) -> bool {
 enum Todo {
     Edit { scene: usize, instruction: String },
     Export,
+    Restyle { style: String },
 }
 
 pub async fn stages(app: &App, job: &mut Job) -> Result<()> {
@@ -863,6 +906,7 @@ pub async fn stages(app: &App, job: &mut Job) -> Result<()> {
     let result = match todo {
         Some(Todo::Edit { scene, instruction }) => edit_scene(app, job, &dir, scene, &instruction).await,
         Some(Todo::Export) => export(app, job, &dir).await,
+        Some(Todo::Restyle { style }) => restyle(app, job, &dir, &style).await,
         None => draft(app, job, &dir).await,
     };
     let _ = std::fs::remove_file(todo_file);
@@ -909,6 +953,11 @@ async fn draft(app: &App, job: &mut Job, dir: &Path) -> Result<()> {
                 s = ask(app, job, &again, |s: &Script| validate(s, &source, &banned)).await?;
             }
             fix_photos(&mut s, assets.images.len());
+            // the owner chose a style before the AI wrote: theirs wins, the AI's pick stays as the recommendation
+            s.recommended = if s.style.is_empty() { "3d".into() } else { s.style.clone() };
+            if !job.style.is_empty() {
+                s.style = job.style.clone();
+            }
             save_script(dir, &s)?;
             s
         }
@@ -1149,7 +1198,9 @@ async fn export(app: &App, job: &mut Job, dir: &Path) -> Result<()> {
 /* ─── HTTP ─── */
 
 /// Makes a story job for a product whose page data is already here, and queues it.
-pub fn create_from(app: &App, base_id: &str) -> Result<String> {
+/// `style`: the picture style the owner chose up front ("" = let the AI pick).
+pub fn create_from(app: &App, base_id: &str, style: &str) -> Result<String> {
+    need(style_ok(style), "ไม่มีรูปแบบภาพนี้")?;
     let base = app.load_job(base_id)?;
     let from = app.job_dir(base_id);
     need(from.join("product.json").is_file() && pipeline::has_verified_gallery(&from), "ยังไม่มีข้อมูลสินค้า เปิดหน้าสินค้าแล้วกดไอคอนส่วนขยายก่อน")?;
@@ -1163,7 +1214,8 @@ pub fn create_from(app: &App, base_id: &str) -> Result<String> {
     std::fs::create_dir_all(&dir)?;
     std::fs::copy(from.join("product.json"), dir.join("product.json"))?;
     // url fields stay empty on purpose: a story job must never be mistaken for the product's clip job
-    let job = Job { id: id.clone(), kind: KIND.into(), title: base.title.clone(), state: "queued".into(), stage: "รอคิว".into(), seed: crate::new_seed(), created: crate::now(), ..Default::default() };
+    // job.style = the owner's choice; the AI still writes its own pick, kept as the recommendation
+    let job = Job { id: id.clone(), kind: KIND.into(), style: style.to_string(), title: base.title.clone(), state: "queued".into(), stage: "รอคิว".into(), seed: crate::new_seed(), created: crate::now(), ..Default::default() };
     app.save_job(&job)?;
     app.queue.send(id.clone())?;
     Ok(id)
@@ -1179,6 +1231,8 @@ pub async fn page_script() -> ([(header::HeaderName, &'static str); 1], &'static
 #[derive(Deserialize)]
 pub struct LinkReq {
     url: String,
+    #[serde(default)]
+    style: String,
 }
 /// Paste a link on the Story page: start now if the product is known, else open the tab and start when the extension reports.
 pub async fn add_link(State(app): State<Shared>, Json(req): Json<LinkReq>) -> Api<Json<Value>> {
@@ -1190,20 +1244,22 @@ pub async fn add_link(State(app): State<Shared>, Json(req): Json<LinkReq>) -> Ap
     };
     if let Some(base) = known {
         let _mutation = app.begin_job_mutation()?;
-        return Ok(Json(json!({"job": create_from(&app, &base.id)?, "started": true})));
+        return Ok(Json(json!({"job": create_from(&app, &base.id, &req.style)?, "started": true})));
     }
     // unknown product: reuse the normal link flow, and leave a note so ingest starts the story
     let _ = crate::add_links(State(app.clone()), Json(crate::LinksReq { urls: vec![url.to_string()], style: String::new() })).await?;
     let dir = app.job_dir(&item);
     std::fs::create_dir_all(&dir)?;
-    std::fs::write(dir.join("want-story"), "")?;
+    need(style_ok(&req.style), "ไม่มีรูปแบบภาพนี้")?;
+    std::fs::write(dir.join("want-story"), &req.style)?; // the chosen style waits here until the product arrives
     Ok(Json(json!({"job": format!("story-{item}"), "started": false})))
 }
 
 /// Called by ingest: if this product was asked for from the Story page, start its story now.
 pub fn on_ingest(app: &App, base_id: &str) {
     let marker = app.job_dir(base_id).join("want-story");
-    if marker.is_file() && create_from(app, base_id).is_ok() {
+    let style = std::fs::read_to_string(&marker).unwrap_or_default();
+    if marker.is_file() && create_from(app, base_id, style.trim()).is_ok() {
         let _ = std::fs::remove_file(marker);
     }
 }
@@ -1272,6 +1328,41 @@ pub async fn edit(State(app): State<Shared>, UrlPath((id, scene)): UrlPath<(Stri
     Ok(Json(json!({"ok": true})))
 }
 
+/// Same script, same voice, new picture: every scene is rendered again in the chosen style.
+async fn restyle(app: &App, job: &mut Job, dir: &Path, style: &str) -> Result<()> {
+    need(style_ok(style) && !style.is_empty(), "ไม่มีรูปแบบภาพนี้")?;
+    let mut script = load_script(dir)?;
+    if script.recommended.is_empty() {
+        script.recommended = if script.style.is_empty() { "3d".into() } else { script.style.clone() };
+    }
+    script.style = style.to_string();
+    save_script(dir, &script)?;
+    job.stage = "กำลังเรนเดอร์ทุกฉากในรูปแบบใหม่".into();
+    app.save_job(job)?;
+    stage_renderer(app, job, dir, &script)?;
+    let all: Vec<usize> = (1..=script.rows.len()).collect();
+    render_scenes(app, dir, &all).await?;
+    job.seconds = build_draft(app, dir, &script).await?;
+    job.warnings = warnings(dir, &script, job.seconds);
+    job.state = "review".into();
+    job.stage = "รอตรวจ".into();
+    Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct StyleReq {
+    style: String,
+}
+pub async fn set_style(State(app): State<Shared>, UrlPath(id): UrlPath<String>, Json(req): Json<StyleReq>) -> Api<Json<Value>> {
+    need(!req.style.is_empty() && style_ok(&req.style), "ไม่มีรูปแบบภาพนี้")?;
+    queue_todo(&app, &id, &Todo::Restyle { style: req.style })?;
+    Ok(Json(json!({"ok": true})))
+}
+
+pub async fn styles() -> Json<Value> {
+    Json(json!(STYLES.iter().map(|(id, look, suits)| json!({"id": id, "look": look, "suits": suits})).collect::<Vec<_>>()))
+}
+
 pub async fn confirm(State(app): State<Shared>, UrlPath(id): UrlPath<String>) -> Api<Json<Value>> {
     queue_todo(&app, &id, &Todo::Export)?;
     Ok(Json(json!({"ok": true})))
@@ -1297,7 +1388,7 @@ pub async fn restart(State(app): State<Shared>, UrlPath(id): UrlPath<String>) ->
     let job = story_job(&app, &id)?;
     need(!matches!(job.state.as_str(), "queued" | "running"), "งานนี้อยู่ในคิวหรือกำลังทำอยู่")?;
     let base = id.strip_prefix("story-").unwrap_or(&id);
-    Ok(Json(json!({"job": create_from(&app, base)?})))
+    Ok(Json(json!({"job": create_from(&app, base, &job.style)?})))
 }
 
 #[cfg(test)]
@@ -1365,6 +1456,19 @@ mod tests {
     }
 
     #[test]
+    fn style_must_come_from_the_library_and_reaches_the_renderer() {
+        let mut s = good();
+        s.style = "crayon".into();
+        assert_eq!(validate(&s, SRC, &[]), Vec::<String>::new());
+        assert_eq!(film_json(&s, 1)["style"], "crayon");
+        s.style = String::new(); // scripts written before styles existed render in 3D
+        assert_eq!(film_json(&s, 1)["style"], "3d");
+        s.style = "anime".into();
+        assert!(validate(&s, SRC, &[]).join("
+").contains("anime"));
+    }
+
+    #[test]
     fn rejects_a_story_without_the_formula() {
         let mut s = good();
         s.rows[0].vo = "วันนี้มาแนะนำกระปุกนมผง".into();
@@ -1373,6 +1477,10 @@ mod tests {
         assert!(errs.contains("ถ้า... อย่า..."), "{errs}");
         assert!(errs.contains(TWIST), "{errs}");
         assert!(errs.contains("สินค้าต้องเข้าหลังแถวจุดเปลี่ยน"), "{errs}"); // no twist row = product is never allowed
+        // the bedroom draft said "คุณทำถูกทุกอย่าง" twice in a row
+        let mut s = good();
+        s.rows[7].vo = "คุณทำถูก ทุกอย่าง ตามสัญชาตญาณ".into();
+        assert!(validate(&s, SRC, &[]).join("\n").contains("ใช้ได้แถวเดียว"));
     }
 
     #[test]

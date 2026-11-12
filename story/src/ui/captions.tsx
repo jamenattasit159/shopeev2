@@ -22,7 +22,8 @@ export const CHUNKS: Chunk[] = LINE.flatMap((l) => {
 });
 
 /** y = top of the caption block. Keep faces/props above ~1150 px or below ~1500 px in every shot. */
-export function Captions({ hideFrom = 1e9, y = 1230 }: { hideFrom?: number; y?: number }) {
+/** paper = drawn on a light page (crayon style): the phrase is ink-coloured instead of cream */
+export function Captions({ hideFrom = 1e9, y = 1230, paper = false }: { hideFrom?: number; y?: number; paper?: boolean }) {
   const f = useCurrentFrame();
   const t = f / FPS;
   const c = CHUNKS.find((k) => t >= k.a && t < k.b);
@@ -33,7 +34,7 @@ export function Captions({ hideFrom = 1e9, y = 1230 }: { hideFrom?: number; y?: 
     <div style={{ position: "absolute", left: 0, right: 0, top: y, display: "flex", flexDirection: "column", alignItems: "center", opacity: k }}>
       {c.style === "r"
         ? <span style={{ ...base, background: RED, color: "#FFF6EE", padding: "2px 22px 6px", borderRadius: 10, boxShadow: "0 4px 14px rgba(0,0,0,0.35)" }}>{c.text}</span>
-        : <span style={{ ...base, color: c.style === "a" ? AMB : CREAM, textShadow: "0 3px 16px rgba(0,0,0,0.65)" }}>{c.text}</span>}
+        : <span style={{ ...base, color: paper ? (c.style === "a" ? "#C0621E" : "#2d3263") : c.style === "a" ? AMB : CREAM, textShadow: paper ? "0 0 10px #f4efe3, 0 0 18px #f4efe3" : "0 3px 16px rgba(0,0,0,0.65)" }}>{c.text}</span>}
       {EP.subtitles && c.sub ? <div style={{ marginTop: 22, maxWidth: 880, background: "rgba(20,22,28,0.74)", color: "#F2F2F2", fontFamily: SANS, fontWeight: 600, fontSize: 36, lineHeight: 1.3, padding: "8px 26px 10px", borderRadius: 10, textAlign: "center" }}>{c.sub}</div> : null}
     </div>
   );

@@ -6,6 +6,9 @@ const STATES = { queued: "รอคิว", running: "กำลังทำ", re
 const STATE_CLASS = { queued: "queued", running: "running", review: "waiting", done: "done", error: "error" };
 const STEPS = ["เตรียมรูป", "เขียนบท", "พากย์เสียง", "จับเวลา", "โมเดลสินค้า", "เรนเดอร์", "รวมร่าง"];
 const SET_NAMES = { kitchen: "ครัว", bedroom: "ห้องนอน", bathroom: "ห้องน้ำ" };
+const STYLE_NAMES = { "3d": "3 มิติ", crayon: "สมุดภาพเทียนสี", toon: "การ์ตูนยุค 30" };
+let styleList = []; // [{id, look, suits}] from /api/story/styles
+let pickedStyle = ""; // chosen on the create form; "" = the AI picks
 
 let jobs = [];
 let selected = new URLSearchParams(location.search).get("job") || "";
@@ -132,6 +135,18 @@ function progress(job) {
   STEPS.forEach((name, i) => steps.append(el("li", i + 1 < current ? "done" : i + 1 === current ? "current" : "", name)));
   box.append(el("p", "", job.stage), steps);
   box.append(el("p", "hint", "ทั้งงานใช้เวลาหลายนาที ปิดหน้านี้ได้ งานยังทำต่อ"));
+  const actions = el("div", "actions");
+  actions.append(button("ยกเลิกงาน", "subtle", null, async () => {
+    if (!confirm("ยกเลิกงานนี้? ถ้ามีฉบับร่างเดิมอยู่ จะกลับไปที่ฉบับร่างนั้น")) return;
+    try {
+      await api("/api/jobs/" + encodeURIComponent(job.id) + "/cancel", { method: "POST" });
+      shownKey = "";
+      await refresh();
+    } catch (error) {
+      showMessage(error.message);
+    }
+  }));
+  box.append(actions);
   return box;
 }
 
@@ -211,6 +226,8 @@ function reviewBody(job) {
   const warn = warnings(job);
   if (warn) right.append(warn);
 
+  right.append(stylePicker(job));
+
   const strip = el("div", "strip");
   strip.setAttribute("role", "group");
   strip.setAttribute("aria-label", "ฉากทั้งหมด");
@@ -280,6 +297,44 @@ function reviewBody(job) {
   right.append(strip, editor, finish);
   body.append(right);
   return body;
+}
+
+/** picture styles as pictures: the AI's pick is marked, any other can be chosen (same script and voice, every scene re-rendered) */
+function stylePicker(job) {
+  const box = el("div", "styles");
+  const current = detail.script.style || "3d";
+  box.append(el("strong", "", "รูปแบบภาพ"));
+  if (detail.script.styleWhy) box.append(el("p", "hint", "AI แนะนำ " + (STYLE_NAMES[detail.script.recommended || current] || current) + ": " + detail.script.styleWhy));
+  const grid = el("div", "style-grid");
+  grid.setAttribute("role", "group");
+  grid.setAttribute("aria-label", "เลือกรูปแบบภาพ");
+  const message = el("p", "feedback");
+  message.setAttribute("role", "status");
+  for (const st of styleList) {
+    const tile = el("button", "style-tile");
+    tile.type = "button";
+    tile.setAttribute("aria-pressed", String(st.id === current));
+    tile.title = st.look + " · เหมาะกับ " + st.suits;
+    const img = el("img");
+    img.alt = "";
+    img.loading = "lazy";
+    img.src = "/story-styles/" + st.id + ".jpg";
+    tile.append(img, el("span", "", STYLE_NAMES[st.id] || st.id));
+    if (st.id === (detail.script.recommended || current) && detail.script.styleWhy) tile.append(el("em", "", "AI แนะนำ"));
+    tile.addEventListener("click", async () => {
+      if (st.id === current) return;
+      if (!confirm("เปลี่ยนเป็น " + (STYLE_NAMES[st.id] || st.id) + "? ใช้บทและเสียงเดิม แต่เรนเดอร์ใหม่ทุกฉาก ใช้เวลาหลายนาที")) return;
+      try {
+        await api("/api/story/" + encodeURIComponent(job.id) + "/style", { method: "POST", body: JSON.stringify({ style: st.id }) });
+        await refresh();
+      } catch (error) {
+        say(message, error.message, true);
+      }
+    });
+    grid.append(tile);
+  }
+  box.append(grid, message);
+  return box;
 }
 
 function doneBody(job) {
@@ -357,7 +412,7 @@ $("link-form").addEventListener("submit", async (event) => {
   const url = $("url").value.trim().split(/\s+/)[0] || "";
   $("start").disabled = true;
   try {
-    const result = await api("/api/story/link", { method: "POST", body: JSON.stringify({ url }) });
+    const result = await api("/api/story/link", { method: "POST", body: JSON.stringify({ url, style: pickedStyle }) });
     $("url").value = "";
     say(message, result.started ? "เริ่มงานแล้ว" : "เปิดหน้าสินค้าให้แล้ว รอส่วนขยาย Chrome ส่งข้อมูล งานจะเริ่มเอง");
     select(result.job);
@@ -368,6 +423,30 @@ $("link-form").addEventListener("submit", async (event) => {
     $("start").disabled = false;
   }
 });
+
+/** the create form's style choice, as pictures: "AI picks" first, then each style */
+function renderPick() {
+  const grid = $("style-pick");
+  const choices = [{ id: "", name: "ให้ AI เลือก", look: "AI ดูสินค้าแล้วเลือกรูปแบบที่เหมาะที่สุด เปลี่ยนทีหลังได้ในหน้าตรวจ" },
+    ...styleList.map((s) => ({ id: s.id, name: STYLE_NAMES[s.id] || s.id, look: s.look + " · เหมาะกับ " + s.suits }))];
+  grid.replaceChildren(...choices.map((c) => {
+    const tile = el("button", "style-tile");
+    tile.type = "button";
+    tile.setAttribute("role", "radio");
+    tile.setAttribute("aria-checked", String(c.id === pickedStyle));
+    tile.setAttribute("aria-pressed", String(c.id === pickedStyle));
+    tile.title = c.look;
+    if (c.id) {
+      const img = el("img");
+      img.alt = "";
+      img.src = "/story-styles/" + c.id + ".jpg";
+      tile.append(img);
+    } else tile.append(el("span", "ai", "AI"));
+    tile.append(el("span", "", c.name));
+    tile.addEventListener("click", () => { pickedStyle = c.id; renderPick(); });
+    return tile;
+  }));
+}
 
 /* ─── keep in step with the server ─── */
 
@@ -402,6 +481,7 @@ async function health() {
   } catch { /* the connection badge already says so */ }
 }
 
+api("/api/story/styles").then((list) => { styleList = list; shownKey = ""; renderPick(); refresh(); }).catch(() => {});
 refresh();
 health();
 setInterval(refresh, 3000);

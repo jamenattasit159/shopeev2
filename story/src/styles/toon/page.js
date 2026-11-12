@@ -192,29 +192,136 @@ function cat(pose, f, seed) {
   });
 }
 
-/** draw one frame. o: set, state, you, pet, noPet, seed, label, photo (an Image or null), product (0..1 = photo pop), f (frame) */
+/** fit an image into a w×h box, keeping its shape */
+function fitBox(img, w, h) { const k = Math.min(w / img.width, h / img.height); return [img.width * k, img.height * k]; }
+
+/** the real product in colour, standing with its base at (x, y) screen px. A cut-out gets a thick ink outline traced round
+ *  its own silhouette (it reads as a drawn object); a plain photo falls back to a framed picture. */
+function product(g, o, x, y, boxW, boxH, b) {
+  const img = o.cutout ?? o.photo;
+  if (!img) return;
+  const [w, h] = fitBox(img, boxW, boxH);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.save();
+  g.translate(x, y); g.scale(1 - b * 0.5, 1 + b); // breathes on the beat like everything else
+  if (o.cutout) {
+    const lw = Math.max(5, w * 0.018);
+    // four hard drop-shadows in ink = an outline that follows the cut-out's own edge
+    g.filter = `drop-shadow(${lw}px 0 0 ${P.ink}) drop-shadow(-${lw}px 0 0 ${P.ink}) drop-shadow(0 ${lw}px 0 ${P.ink}) drop-shadow(0 -${lw}px 0 ${P.ink})`;
+    g.drawImage(img, -w / 2, -h, w, h);
+    g.filter = 'none';
+    g.drawImage(img, -w / 2, -h, w, h);
+  } else {
+    g.fillStyle = P.white; g.fillRect(-w / 2 - 16, -h - 16, w + 32, h + 32);
+    g.lineWidth = 6; g.strokeStyle = P.ink; g.strokeRect(-w / 2 - 16, -h - 16, w + 32, h + 32);
+    g.drawImage(img, -w / 2, -h, w, h);
+  }
+  g.restore();
+}
+
+/** the reveal shot: curtains part on a stage, a spotlight finds the product, a title card names it */
+function reveal(g, o) {
+  const f = o.f, pop = Math.min(1, o.product ?? 1), open = Math.min(1, f / 14);
+  T.BASE.splice(0, 6, 1, 0, 0, 1, 0, 0);
+  T.frame(f / 30, { amp: 1.1 });
+  wash(rect(-100, -100, 1300, 2200), P.dark, 31);
+  wash(rect(-100, 1460, 1300, 700), P.dmid, 32); // stage floor
+  // spotlight cone + pool
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const cone = g.createLinearGradient(540, 0, 540, 1500);
+  cone.addColorStop(0, 'rgba(255,253,240,0.05)'); cone.addColorStop(1, 'rgba(255,253,240,0.28)');
+  g.fillStyle = cone; g.beginPath(); g.moveTo(470, 0); g.lineTo(610, 0); g.lineTo(920, 1185); g.lineTo(160, 1185); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,253,240,0.45)'; g.beginPath(); g.ellipse(540, 1185, 380, 80, 0, 0, 7); g.fill();
+  // curtains slide open; their folds are ink strokes
+  for (const side of [-1, 1]) {
+    const edge = 540 + side * (40 + 520 * open), x0 = side < 0 ? -100 : edge, x1 = side < 0 ? edge : 1200;
+    shape(rect(x0, -100, x1 - x0, 2200), { fill: P.mid, lw: 6, boil: 0.4 });
+    for (let k = 1; k < 5; k++) stroke([[x0 + (x1 - x0) * k / 5, -100], [x0 + (x1 - x0) * k / 5 + side * 20, 2100]], 4, { line: P.dark });
+  }
+  shape(rect(-100, -100, 1300, 230), { fill: P.dark, lw: 6, boil: 0 }); // valance
+  for (let x = -60; x < 1200; x += 120) shape(T.arc(x + 60, 130, 60, 40, 0, Math.PI, 12), { fill: P.dark, lw: 5, boil: 0 });
+  // the product pops in on the beat
+  const s = 0.4 + 0.6 * Math.min(1, pop * 1.15), b = breathe(f, 0.8);
+  product(g, o, 540, 1180, 520 * s, 760 * s, b); // base above the caption band (y ≈ 1230); narrow enough to leave room for the labels
+  if (o.shot === 'price') { if (o.price) ticket(g, o.price, f); }
+  else (o.features ?? []).forEach((t, i) => callout(g, t, i, f));
+  // title card with the brand, period style
+  if (o.brand && f > 8) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.save(); g.translate(540, 300); g.rotate(-0.03);
+    g.fillStyle = P.ink; g.fillRect(-380, -70, 760, 140);
+    g.strokeStyle = P.white; g.lineWidth = 4; g.strokeRect(-366, -56, 732, 112); g.strokeRect(-356, -46, 712, 92);
+    g.fillStyle = P.white; g.font = '400 76px Itim'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(o.brand, 0, 4, 700);
+    g.restore();
+  }
+}
+
+/** a feature label in a period plate with an ink arrow to the product; they pop in one after another */
+function callout(g, text, i, f) {
+  const at = 16 + i * 10;
+  if (f < at) return;
+  const pop = Math.min(1, (f - at) / 5), left = i % 2 === 0;
+  const y = [560, 820, 1040][i] ?? 560, x = left ? 160 : 920, tip = [left ? 330 : 750, y + 70];
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.save();
+  g.translate(x, y); g.scale(pop, pop); g.rotate(left ? -0.05 : 0.05);
+  g.font = '400 46px Itim';
+  const w = Math.min(290, g.measureText(text).width + 40);
+  g.fillStyle = P.white; g.strokeStyle = P.ink; g.lineWidth = 6;
+  g.beginPath(); g.roundRect(-w / 2, -36, w, 72, 14); g.fill(); g.stroke();
+  g.fillStyle = P.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 0, 2, w - 24);
+  g.restore();
+  if (pop < 1) return;
+  // the arrow: a curved ink line from the plate to the product with a filled head
+  const sx = x + (left ? 90 : -90), sy = y + 30, mx = (sx + tip[0]) / 2, my = Math.min(sy, tip[1]) - 50;
+  g.strokeStyle = P.ink; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(mx, my, tip[0], tip[1]); g.stroke();
+  const a = Math.atan2(tip[1] - my, tip[0] - mx);
+  g.fillStyle = P.ink; g.beginPath(); g.moveTo(tip[0] + Math.cos(a) * 14, tip[1] + Math.sin(a) * 14);
+  g.lineTo(tip[0] + Math.cos(a + 2.5) * 22, tip[1] + Math.sin(a + 2.5) * 22); g.lineTo(tip[0] + Math.cos(a - 2.5) * 22, tip[1] + Math.sin(a - 2.5) * 22); g.fill();
+}
+
+/** the price as a 1930s admission ticket: notched corners, double rule, big numerals; it stamps in on the beat */
+function ticket(g, price, f) {
+  const pop = Math.min(1, Math.max(0, (f - 8) / 6)), s = 0.6 + 0.4 * pop + (pop >= 1 ? breathe(f, 0.6) : 0);
+  if (pop <= 0) return;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.save(); g.translate(760, 1000); g.rotate(-0.12); g.scale(s, s);
+  const w = 420, h = 200, r = 26;
+  g.beginPath();
+  g.moveTo(-w / 2 + r, -h / 2); g.lineTo(w / 2 - r, -h / 2); g.arc(w / 2, -h / 2, r, Math.PI, Math.PI / 2, true);
+  g.lineTo(w / 2, h / 2 - r); g.arc(w / 2, h / 2, r, -Math.PI / 2, Math.PI, true); g.lineTo(-w / 2 + r, h / 2);
+  g.arc(-w / 2, h / 2, r, 0, -Math.PI / 2, true); g.lineTo(-w / 2, -h / 2 + r); g.arc(-w / 2, -h / 2, r, Math.PI / 2, 0, true); g.closePath();
+  g.fillStyle = P.white; g.fill(); g.strokeStyle = P.ink; g.lineWidth = 8; g.stroke();
+  g.lineWidth = 3; g.strokeRect(-w / 2 + 34, -h / 2 + 22, w - 68, h - 44);
+  g.fillStyle = P.ink; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '400 112px Itim'; g.fillText('฿' + price, 0, 10, w - 90);
+  g.restore();
+}
+
+/** draw one frame. o: shot, set, state, you, pet, noPet, seed, label, brand, photo / cutout (Image or null), product (0..1 pop), f (frame) */
 export function drawPage(g, o) {
   T.init(g.canvas);
+  if (o.shot === 'product' || o.shot === 'product-open' || o.shot === 'price') return reveal(g, o);
   const [cx, cy, z] = camOf(o.shot, o.f);
   T.BASE.splice(0, 6, z, 0, 0, z, 540 - cx * z, 960 - cy * z);
   T.frame(o.f / 30, { amp: 1.1 });
   const st = o.state ?? {}, f = o.f;
   room(o.set, st, f);
   aux(o.set, st, f);
-  you(o.you ?? 'rest', f, o.seed);
+  const showPhoto = o.product !== undefined || Boolean(st.product);
+  // once the product is here, you look pleased with it instead of standing blank behind it
+  you(showPhoto && (!o.you || o.you === 'rest') ? 'relief' : (o.you ?? 'rest'), f, o.seed);
   front(o.set);
   const mood = o.you === 'shock' ? 'shock' : st.cold ? 'sad' : 'rest';
-  const showPhoto = o.product !== undefined || Boolean(st.product);
   if (!showPhoto) subject(o.set, st, f, mood, o.label);
   if (!o.noPet) cat(o.pet ?? 'stare', f, o.seed);
-  if (showPhoto && o.photo) {
-    // the real product, in colour: the one thing in this black-and-white world that is in colour
-    const pop = Math.min(1, o.product ?? 1), s = 300 * (0.6 + 0.4 * pop), [px, py] = T.tx(SUBJ[0], TOP - 175);
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.save(); g.translate(px, py); g.rotate(-0.05); const k = s * z;
-    g.fillStyle = P.white; g.fillRect(-k / 2 - 16, -k / 2 - 16, k + 32, k + 32);
-    g.lineWidth = 6; g.strokeStyle = P.ink; g.strokeRect(-k / 2 - 16, -k / 2 - 16, k + 32, k + 32);
-    g.drawImage(o.photo, -k / 2, -k / 2, k, k); g.restore();
+  if (showPhoto) {
+    // the real product, in colour: the one thing in this black-and-white world that is in colour.
+    // It stands on the counter where the story's object stood, sized like a real object, clear of your face.
+    const [px, py] = T.tx(SUBJ[0] - 60, TOP + 6);
+    product(g, o, px, py, 340 * z, 420 * z, breathe(f));
   }
   if (st.cold) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(10,10,12,${0.35 * Number(st.cold)})`; g.fillRect(0, 0, T.W, T.H); }
 }

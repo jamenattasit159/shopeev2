@@ -27,7 +27,7 @@ type Card =
   | { type: "photo"; src: string; label?: string } | { type: "price"; amount: string; src?: string };
 type CutPlan = { shot: string; you?: string; pet?: string; noPet?: boolean; state?: Record<string, unknown>; card?: Card };
 type ScenePlan = { line: number; cuts: CutPlan[] };
-type FilmPlan = { set?: string; seed?: number; style?: string; subject?: { label?: string; note?: string }; scenes: ScenePlan[] };
+type FilmPlan = { set?: string; seed?: number; style?: string; subject?: { label?: string; note?: string }; features?: string[]; scenes: ScenePlan[] };
 const PLAN = FILM as unknown as FilmPlan;
 const SCENES = PLAN.scenes;
 /** the room this clip plays in; `set` on a component overrides it (used by the library check) */
@@ -140,12 +140,15 @@ const Opening: React.FC<Scene> = (s) => {
 /** the same cut drawn by a 2D style template ("crayon" picture book, "toon" 1930s cartoon) */
 const PageCut: React.FC<{ c: CutPlan }> = ({ c }) => {
   const f = useCurrentFrame();
-  const photo = c.shot === "photo" || c.shot === "price";
+  const photo = c.shot === "photo";
+  // the price is drawn by the style itself (a period ticket / a crayon tag) on the reveal, not as the 3D paper card
+  const price = c.shot === "price" ? ((c.card as { amount?: string } | undefined)?.amount ?? "") : undefined;
   const shot = photo ? "wide" : c.shot;
-  const product = c.shot === "product-open" ? Math.min(1, Math.max(0, (f - 6) / 12)) : c.shot === "product" || photo ? 1 : undefined;
+  const product = c.shot === "product-open" ? Math.min(1, Math.max(0, (f - 6) / 12)) : c.shot === "product" || photo || price !== undefined ? 1 : undefined;
   const View2D = PLAN.style === "toon" ? ToonView : CrayonView;
   const page = <View2D shot={shot} set={React.useContext(SetCtx) ?? "kitchen"} seed={SEED} label={PLAN.subject?.label}
-    state={c.state} you={c.you} pet={c.pet} noPet={c.noPet} product={product} />;
+    state={c.state} you={c.you} pet={c.pet} noPet={c.noPet} product={product} features={PLAN.features} price={price} />;
+  if (price !== undefined) return page;
   if (photo) return <><BlurIn px={6}>{page}</BlurIn><CardView c={c.card ?? { type: "photo", src: "product.png" }} /></>;
   return <>{page}<CardView c={c.card} /></>;
 };

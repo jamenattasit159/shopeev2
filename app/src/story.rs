@@ -169,6 +169,8 @@ pub struct Script {
     pub style_why: String,
     /// the AI's own pick, kept when the owner switches style
     pub recommended: String,
+    /// 2-3 short feature labels shown with arrows on the product reveal; each must be copied from the product page
+    pub features: Vec<String>,
     /// how the story is told (ANGLES)
     pub angle: String,
     /// 1-based row where the story turns (see ANGLES); for "twist" it is the "ยกเว้นเรื่องเดียว" row
@@ -208,6 +210,14 @@ pub struct Script {
     pub unverified: Vec<String>,
     pub caption: String,
     pub hashtags: Vec<String>,
+}
+
+/// Feature labels for the reveal: kept only when short and copied from the product page (spacing aside), at most 3.
+/// Dropped instead of failing the script: they are a garnish, and an invented claim must never reach the picture.
+pub fn page_features(features: &[String], source: &str) -> Vec<String> {
+    let squash = |t: &str| t.split_whitespace().collect::<String>();
+    let page = squash(source);
+    features.iter().map(|f| f.trim().to_string()).filter(|f| (2..=14).contains(&f.chars().count()) && page.contains(&squash(f))).take(3).collect()
 }
 
 fn digits(s: &str) -> Vec<String> {
@@ -430,6 +440,7 @@ fn script_prompt(title: &str, source: &str, images: usize, angle: &str, recent: 
 {{
   "style": "3d หรือ crayon หรือ toon",
   "styleWhy": "เหตุผลหนึ่งประโยค",
+  "features": ["จุดเด่นของสินค้า 2-3 ข้อ แต่ละข้อ 2-14 ตัวอักษร คัดคำมาจากข้อมูลสินค้าตรงตัว เช่น กันฝุ่น"],
   "angle": "{angle_id}",
   "turnRow": 0,
   "set": "kitchen หรือ bedroom หรือ bathroom",
@@ -608,7 +619,7 @@ fn film_json(s: &Script, seed: u64) -> Value {
     // the seed picks wall colour, clothes and the cat, so clips from the same three rooms do not look alike
     let subject = json!({"label": s.subject_label.trim(), "note": s.subject_note.trim()});
     let style = if s.style.is_empty() { "3d" } else { s.style.as_str() };
-    json!({"set": set_of(&s.set).map_or("kitchen", |d| d.name), "style": style, "seed": seed % 1000, "subject": subject, "scenes": scenes})
+    json!({"set": set_of(&s.set).map_or("kitchen", |d| d.name), "style": style, "seed": seed % 1000, "subject": subject, "features": s.features, "scenes": scenes})
 }
 
 fn episode_json(s: &Script) -> Value {
@@ -650,6 +661,14 @@ fn stage_renderer(app: &App, job: &Job, dir: &Path, s: &Script) -> Result<()> {
         } else if i > 0 {
             let _ = std::fs::remove_file(to); // a photo of the previous job must never show up in this one
         }
+    }
+    // the product with its background removed (made by the clip pipeline when the cut passed its check): the 2D styles
+    // stand it on the counter and on the reveal page; without it they fall back to the framed photo
+    let cut = assets.join("cut.png");
+    if cut.is_file() {
+        std::fs::copy(cut, public.join("cutout.png"))?;
+    } else {
+        let _ = std::fs::remove_file(public.join("cutout.png"));
     }
     Ok(())
 }
@@ -955,6 +974,7 @@ async fn draft(app: &App, job: &mut Job, dir: &Path) -> Result<()> {
             fix_photos(&mut s, assets.images.len());
             // the owner chose a style before the AI wrote: theirs wins, the AI's pick stays as the recommendation
             s.recommended = if s.style.is_empty() { "3d".into() } else { s.style.clone() };
+            s.features = page_features(&s.features, &source);
             if !job.style.is_empty() {
                 s.style = job.style.clone();
             }
@@ -1453,6 +1473,14 @@ mod tests {
     #[test]
     fn accepts_a_valid_story() {
         assert_eq!(validate(&good(), SRC, &[]), Vec::<String>::new());
+    }
+
+    #[test]
+    fn feature_labels_must_come_from_the_page() {
+        let page = "ตู้เก็บจาน ประตูแม่เหล็ก ปิดสนิท กันฝุ่น ชั้นวาง 3 ชั้น";
+        let ai = ["กันฝุ่น", "ประตูแม่เหล็ก", "ฆ่าเชื้อ 99%", "ชั้นวาง3ชั้น", "ป้องกันฝุ่นและสิ่งสกปรกทุกชนิดได้ดี", "ปิดสนิท"].map(String::from);
+        // invented, too long and the 4th one go; spacing differences are fine
+        assert_eq!(page_features(&ai, page), ["กันฝุ่น", "ประตูแม่เหล็ก", "ชั้นวาง3ชั้น"]);
     }
 
     #[test]

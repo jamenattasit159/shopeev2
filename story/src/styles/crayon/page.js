@@ -36,10 +36,10 @@ const hatch = (col, seed, x = {}) => ({ col, p: 0.6, gap: 11, w: 12, ang: 0.5, s
 const rect = (x0, y0, x1, y1) => [[(x0 + x1) / 2, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]];
 
 export function makeLayers() {
-  return { BG: { f: layer(), l: layer() }, PEOPLE: group(), PET: group(), FRONT: group(), PROPS: group(), FX: layer(), WASH: layer(), PHOTO: layer(), labels: [] };
+  return { BG: { f: layer(), l: layer() }, PEOPLE: group(), PET: group(), FRONT: group(), PROPS: group(), FX: layer(), WASH: layer(), PHOTO: layer(), OVER: layer(), labels: [] };
 }
 export function clearLayers(L) {
-  clear(L.BG.f); clear(L.BG.l); clear(L.FX); clear(L.WASH); clear(L.PHOTO);
+  clear(L.BG.f); clear(L.BG.l); clear(L.FX); clear(L.WASH); clear(L.PHOTO); clear(L.OVER);
   clearGroup(L.PEOPLE); clearGroup(L.PET); clearGroup(L.FRONT); clearGroup(L.PROPS);
 }
 
@@ -201,3 +201,32 @@ export function drawPage(L, o) {
   if (st.cold) fill(L.WASH, rect(-300, -300, 1400, 2300), { col: '#ffffff', p: 0.55 * Number(st.cold), gap: 30, w: 60, over: 0, seed: 400 });
 }
 export { K, CAM };
+
+/** a feature label's crayon arrow (the words are written by the view in the hand font); true once it should show */
+export function drawCallout(L, i, f) {
+  const at = 16 + i * 10;
+  if (f < at) return false;
+  const left = i % 2 === 0, y = [560, 820, 1040][i] ?? 560, sx0 = left ? 200 : 880, tip = [left ? 330 : 750, y + 70];
+  const draw = Math.min(1, (f - at) / 8);
+  line(L.OVER, [[sx0, y + 30], [(sx0 + tip[0]) / 2, y - 10], tip], lo(600 + i, { w: 7, col: K.red, draw }));
+  if (draw >= 1) line(L.OVER, [[tip[0] + (left ? -22 : 22), tip[1] - 18], tip, [tip[0] + (left ? -26 : 26), tip[1] + 12]], lo(610 + i, { w: 6, col: K.red }));
+  return true;
+}
+/** the price tag: a red crayon circle scribbled in, then the price is written on it in white wax (the view writes the digits) */
+export function drawPriceTag(L, f) {
+  const draw = Math.min(1, Math.max(0, (f - 6) / 10));
+  if (draw <= 0) return;
+  fill(L.OVER, handCircle(770, 1000, 150, 700, 0.1), hatch(K.red, 701, { p: 0.95, gap: 9, draw }));
+  line(L.OVER, handCircle(770, 1000, 154, 702, 0.12), lo(703, { w: 8, draw }));
+}
+
+/** the reveal page: a fresh page, a yellow scribbled burst for the product to stand on, an underline for the name */
+export function drawReveal(L, f) {
+  clearLayers(L);
+  L.labels = [];
+  const burst = [];
+  for (let i = 0; i <= 24; i++) { const a = (i / 24) * Math.PI * 2, r = i % 2 ? 330 : 430; burst.push([540 + Math.cos(a) * r, 860 + Math.sin(a) * r]); }
+  fill(L.FX, burst, hatch(K.yellow, 500, { p: 0.7, gap: 13, draw: Math.min(1, f / 12) }));
+  line(L.FX, [...burst, burst[1]], lo(501, { w: 7, col: K.orange, draw: Math.min(1, f / 12) }));
+  line(L.FX, [[260, 330], [820, 316]], lo(502, { w: 10, col: K.red, draw: Math.min(1, Math.max(0, (f - 10) / 8)) }));
+}
